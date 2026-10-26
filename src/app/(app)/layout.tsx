@@ -27,8 +27,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           </Suspense>
         </div>
       </aside>
-      <main className="pt-safe mx-auto w-full max-w-5xl px-4 pb-32 sm:px-6 md:pt-8 md:pb-12">
-        <div className="pt-4 md:pt-0">{children}</div>
+      <main className="mx-auto w-full max-w-5xl px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-32 sm:px-6 md:pt-10 md:pb-12">
+        {children}
       </main>
       <MobileTabBar />
     </div>
