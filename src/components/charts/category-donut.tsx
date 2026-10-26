@@ -16,14 +16,16 @@ export function CategoryDonut({ data, currency, centerLabel }: { data: DonutSlic
 
   if (total === 0) {
     return (
-      <div className="flex aspect-square max-h-64 w-full items-center justify-center rounded-full border-[18px] border-muted text-sm text-muted-foreground">
+      <div className="mx-auto flex size-56 items-center justify-center rounded-full border-[18px] border-muted text-sm text-muted-foreground sm:size-64">
         No expenses
       </div>
     );
   }
 
   return (
-    <ChartContainer config={config} className="mx-auto aspect-square max-h-64 w-full">
+    // Explicit size, not aspect-ratio + max-height: iOS Safari sizes the latter from the
+    // width, so the donut overflowed onto the table below.
+    <ChartContainer config={config} className="mx-auto aspect-auto size-56 sm:size-64">
       <PieChart>
         <ChartTooltip
           cursor={false}
