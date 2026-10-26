@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ReceiptIcon } from "lucide-react";
+import { ArrowDownLeftIcon, ReceiptIcon } from "lucide-react";
 import type { Category, Transaction } from "@/db/schema";
-import { CategoryLabel } from "@/components/category-dot";
+import { CategoryDot, CategoryLabel } from "@/components/category-dot";
 import { Money } from "@/components/money";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -102,6 +102,10 @@ export function TransactionList({
                 <Card className="gap-0 py-0">
                   {items.map((t, i) => {
                     const cat = t.categoryId ? categoryById.get(t.categoryId) : undefined;
+                    const subtitle =
+                      t.type === "income"
+                        ? `Income${t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}`
+                        : [t.description ? cat?.name : null, t.amount < 0 ? "Refund" : null].filter(Boolean).join(" · ");
                     return (
                       <button
                         key={t.id}
@@ -110,23 +114,17 @@ export function TransactionList({
                         className="flex min-h-14 items-center gap-3 px-4 py-2.5 text-left transition-colors active:bg-muted data-[divider=true]:border-t"
                         data-divider={i > 0}
                       >
+                        {/* Leading dot so the category color is visible even without a description */}
+                        {t.type === "income" ? (
+                          <ArrowDownLeftIcon aria-hidden className="-mx-0.5 size-3.5 shrink-0 text-income" />
+                        ) : (
+                          <CategoryDot color={cat?.color ?? "gray"} />
+                        )}
                         <div className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate font-medium">
                             {t.description || cat?.name || (t.type === "income" ? "Income" : "Expense")}
                           </span>
-                          {t.type === "expense" && cat && !t.description ? (
-                            t.amount < 0 ? <span className="text-xs text-muted-foreground">Refund</span> : null
-                          ) : t.type === "expense" && cat ? (
-                            <CategoryLabel
-                              name={t.amount < 0 ? `${cat.name} · Refund` : cat.name}
-                              color={cat.color}
-                              className="text-xs text-muted-foreground"
-                            />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Income{t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}
-                            </span>
-                          )}
+                          {subtitle ? <span className="truncate text-xs text-muted-foreground">{subtitle}</span> : null}
                         </div>
                         <Money value={t.amount} type={t.type} currency={currency} className="font-medium" />
                       </button>
