@@ -114,9 +114,11 @@ export function TransactionList({
                           <span className="truncate font-medium">
                             {t.description || cat?.name || (t.type === "income" ? "Income" : "Expense")}
                           </span>
-                          {t.type === "expense" && cat && !t.description ? null : t.type === "expense" && cat ? (
+                          {t.type === "expense" && cat && !t.description ? (
+                            t.amount < 0 ? <span className="text-xs text-muted-foreground">Refund</span> : null
+                          ) : t.type === "expense" && cat ? (
                             <CategoryLabel
-                              name={cat.name}
+                              name={t.amount < 0 ? `${cat.name} · Refund` : cat.name}
                               color={cat.color}
                               className="text-xs text-muted-foreground"
                             />
@@ -168,7 +170,7 @@ export function TransactionList({
                       </TableCell>
                       <TableCell>
                         {t.type === "expense" && cat ? (
-                          <CategoryLabel name={cat.name} color={cat.color} />
+                          <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
                         ) : (
                           <span className="text-muted-foreground">Income{t.hours ? ` · ${Number(t.hours)} h` : ""}</span>
                         )}

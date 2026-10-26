@@ -13,7 +13,6 @@ import { requireUser } from "./dal";
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const MAX_AMOUNT = 100_000_000_00; // 100M in minor units
-const amount = z.number().int().positive().max(MAX_AMOUNT);
 const plannedAmount = z.number().int().min(0).max(MAX_AMOUNT);
 const monthKey = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const dateKey = z.iso.date();
@@ -44,9 +43,10 @@ const transactionInput = z
     date: dateKey,
     description: z.string().trim().max(200),
     categoryId: z.uuid().nullable(),
-    amount,
+    amount: z.number().int().min(-MAX_AMOUNT).max(MAX_AMOUNT).refine((v) => v !== 0, "Amount cannot be 0"),
     hours: z.number().min(0).max(1000).nullable(),
   })
+  .refine((t) => t.type === "expense" || t.amount > 0, { message: "Income must be positive", path: ["amount"] })
   .refine((t) => t.type === "income" || t.categoryId, { message: "Pick a category", path: ["categoryId"] })
   .refine((t) => t.type === "expense" || t.description.length > 0, {
     message: "Enter the income source",

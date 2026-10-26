@@ -122,7 +122,10 @@ export const transaction = pgTable(
     description: text().notNull().default(""),
     /** Required for expenses, optional for income. */
     categoryId: uuid().references(() => category.id, { onDelete: "restrict" }),
-    /** Always positive, minor units (grosze). Sign comes from `type`. */
+    /**
+     * Minor units (grosze). Income is always positive. Expenses are positive,
+     * or negative for a refund / money back, which reduces the category's spend.
+     */
     amount: integer().notNull(),
     /** Hours worked, for income entries. */
     hours: numeric({ precision: 7, scale: 2 }),

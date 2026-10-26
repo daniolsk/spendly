@@ -8,8 +8,9 @@ import type { Category, Transaction } from "@/db/schema";
 import { CategoryDot } from "@/components/category-dot";
 import { ResponsiveDialog } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -116,7 +117,8 @@ function TransactionForm({
   onDone: () => void;
 }) {
   const [type, setType] = useState<TxType>(initialType);
-  const [amount, setAmount] = useState(tx ? toInputValue(tx.amount) : "");
+  const [amount, setAmount] = useState(tx ? toInputValue(Math.abs(tx.amount)) : "");
+  const [refund, setRefund] = useState(tx ? tx.type === "expense" && tx.amount < 0 : false);
   const [date, setDate] = useState(tx?.date ?? defaultDate(month));
   const [description, setDescription] = useState(tx?.description ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(tx?.categoryId ?? null);
@@ -147,11 +149,11 @@ function TransactionForm({
         date,
         description,
         categoryId: type === "expense" ? categoryId : null,
-        amount: parsedAmount!,
+        amount: type === "expense" && refund ? -parsedAmount! : parsedAmount!,
         hours: type === "income" ? parsedHours : null,
       });
       if (res.ok) {
-        toast.success(tx ? "Transaction updated" : type === "income" ? "Income added" : "Expense added");
+        toast.success(tx ? "Transaction updated" : type === "income" ? "Income added" : refund ? "Refund added" : "Expense added");
         onDone();
       } else {
         toast.error(res.error);
@@ -241,6 +243,16 @@ function TransactionForm({
           </Field>
         ) : null}
 
+        {type === "expense" ? (
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel htmlFor="tx-refund">Refund / money back</FieldLabel>
+              <FieldDescription>Reduces this category&apos;s spending instead of counting as income.</FieldDescription>
+            </FieldContent>
+            <Switch id="tx-refund" checked={refund} onCheckedChange={setRefund} />
+          </Field>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-3">
           <Field data-invalid={!!errors.date} className={type === "expense" ? "col-span-2" : undefined}>
             <FieldLabel htmlFor="tx-date">Date</FieldLabel>
@@ -307,7 +319,7 @@ function TransactionForm({
             </AlertDialog>
           ) : null}
           <Button type="submit" size="lg" className="h-11 flex-1" disabled={pending}>
-            {pending ? "Saving…" : tx ? "Save changes" : type === "income" ? "Add income" : "Add expense"}
+            {pending ? "Saving…" : tx ? "Save changes" : type === "income" ? "Add income" : refund ? "Add refund" : "Add expense"}
           </Button>
         </div>
       </FieldGroup>
