@@ -30,15 +30,14 @@ export default function MonthPage(props: PageProps<"/m/[month]">) {
   );
 }
 
-async function MonthContent({ params, searchParams }: PageProps<"/m/[month]">) {
-  const [{ month }, query] = await Promise.all([params, searchParams]);
+async function MonthContent({ params }: PageProps<"/m/[month]">) {
+  const { month } = await params;
   if (!isMonthKey(month)) notFound();
 
   const user = await requireUser();
   const data = await getMonthData(user.id, month);
   const { stats, settings } = data;
   const currency = settings.currency;
-  const tab = typeof query.tab === "string" ? query.tab : undefined;
 
   return (
     <TransactionEditorProvider
@@ -80,7 +79,6 @@ async function MonthContent({ params, searchParams }: PageProps<"/m/[month]">) {
         </div>
 
         <MonthTabs
-          initialTab={tab}
           transactions={
             <TransactionList transactions={data.transactions} categories={data.allCategories} currency={currency} />
           }

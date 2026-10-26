@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
@@ -13,11 +14,14 @@ export function MonthSwitcher({ month }: { month: string }) {
   const [open, setOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(year);
   const today = currentMonthKey();
+  // Keep the open tab (Transactions / Income / Statistics) when moving between months.
+  const tab = useSearchParams().get("tab");
+  const monthHref = (key: string) => `/m/${key}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`;
 
   return (
     <div className="flex items-center gap-1">
       <Button variant="ghost" size="icon-lg" asChild>
-        <Link href={`/m/${shiftMonth(month, -1)}`} aria-label="Previous month">
+        <Link href={monthHref(shiftMonth(month, -1))} aria-label="Previous month">
           <ChevronLeftIcon />
         </Link>
       </Button>
@@ -61,7 +65,7 @@ export function MonthSwitcher({ month }: { month: string }) {
                   variant={key === month ? "default" : "ghost"}
                   className={cn("h-9", key === today && key !== month && "ring-1 ring-ring")}
                 >
-                  <Link href={`/m/${key}`} onClick={() => setOpen(false)}>
+                  <Link href={monthHref(key)} onClick={() => setOpen(false)}>
                     {monthName(i + 1)}
                   </Link>
                 </Button>
@@ -71,7 +75,7 @@ export function MonthSwitcher({ month }: { month: string }) {
         </PopoverContent>
       </Popover>
       <Button variant="ghost" size="icon-lg" asChild>
-        <Link href={`/m/${shiftMonth(month, 1)}`} aria-label="Next month">
+        <Link href={monthHref(shiftMonth(month, 1))} aria-label="Next month">
           <ChevronRightIcon />
         </Link>
       </Button>
