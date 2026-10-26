@@ -127,8 +127,10 @@ export const transaction = pgTable(
      * or negative for a refund / money back, which reduces the category's spend.
      */
     amount: integer().notNull(),
-    /** Hours worked, for income entries. */
+    /** Hours worked, for hourly income. */
     hours: numeric({ precision: 7, scale: 2 }),
+    /** Hourly rate in minor units; set for hourly income, where amount = hours × rate. */
+    rate: integer(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow(),
   },

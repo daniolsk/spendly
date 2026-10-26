@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, use, useState, useTransition, type ReactNode } from "react";
+import { createContext, use, useId, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Trash2Icon } from "lucide-react";
@@ -24,11 +24,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { parseMoney, toInputValue } from "@/lib/money";
+import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
 import { currentMonthKey, todayKey } from "@/lib/month";
 import { deleteTransaction, saveTransaction } from "@/server/actions";
+import type { IncomeSource } from "@/server/queries";
 
 type TxType = Transaction["type"];
+type IncomeKind = "flat" | "hourly";
 type EditorState = { open: false } | { open: true; tx?: Transaction; type: TxType };
 
 type EditorContextValue = {
@@ -48,11 +50,13 @@ export function TransactionEditorProvider({
   month,
   categories,
   currency,
+  incomeSources,
   children,
 }: {
   month: string;
   categories: Category[];
   currency: string;
+  incomeSources: IncomeSource[];
   children: ReactNode;
 }) {
   const [state, setState] = useState<EditorState>({ open: false });
@@ -87,6 +91,7 @@ export function TransactionEditorProvider({
             month={month}
             categories={categories}
             currency={currency}
+            incomeSources={incomeSources}
             tx={state.tx}
             initialType={state.type}
             onDone={close}
@@ -97,14 +102,21 @@ export function TransactionEditorProvider({
   );
 }
 
-function defaultDate(month: string) {
+function defaultDate(month: string, type: TxType) {
+  if (type === "income") return `${month}-01`;
   return month === currentMonthKey() ? todayKey() : `${month}-01`;
+}
+
+function parseHours(input: string) {
+  const v = Number(input.trim().replace(",", "."));
+  return input.trim() && Number.isFinite(v) ? v : null;
 }
 
 function TransactionForm({
   month,
   categories,
   currency,
+  incomeSources,
   tx,
   initialType,
   onDone,
@@ -112,35 +124,69 @@ function TransactionForm({
   month: string;
   categories: Category[];
   currency: string;
+  incomeSources: IncomeSource[];
   tx?: Transaction;
   initialType: TxType;
   onDone: () => void;
 }) {
+  const sourcesId = useId();
   const [type, setType] = useState<TxType>(initialType);
-  const [amount, setAmount] = useState(tx ? toInputValue(Math.abs(tx.amount)) : "");
+  const [incomeKind, setIncomeKind] = useState<IncomeKind>(tx?.rate ? "hourly" : "flat");
+  const [amount, setAmount] = useState(tx && !tx.rate ? toInputValue(Math.abs(tx.amount)) : "");
   const [refund, setRefund] = useState(tx ? tx.type === "expense" && tx.amount < 0 : false);
-  const [date, setDate] = useState(tx?.date ?? defaultDate(month));
+  const [date, setDate] = useState(tx?.date ?? defaultDate(month, initialType));
   const [description, setDescription] = useState(tx?.description ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(tx?.categoryId ?? null);
   const [hours, setHours] = useState(tx?.hours ? String(Number(tx.hours)).replace(".", ",") : "");
+  const [rate, setRate] = useState(tx?.rate ? toInputValue(tx.rate) : "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
+  const hourly = type === "income" && incomeKind === "hourly";
+  const parsedHours = parseHours(hours);
+  const parsedRate = rate.trim() ? parseMoney(rate) : null;
+  const hourlyTotal =
+    parsedHours && parsedRate ? Math.round((Math.round(parsedHours * 100) / 100) * parsedRate) : null;
+
   // Archived categories stay selectable only for the transaction that already uses them.
   const options = categories.filter((c) => !c.archived || c.id === tx?.categoryId);
+  const unit = currency === "PLN" ? "zł" : currency;
+
+  function changeType(next: TxType) {
+    setType(next);
+    // Income usually lands on the 1st; keep a user-picked date otherwise.
+    if (!tx && date === defaultDate(month, type)) setDate(defaultDate(month, next));
+  }
+
+  /** Picking a known source restores how it was paid last time. */
+  function changeSource(value: string) {
+    setDescription(value);
+    if (tx) return;
+    const known = incomeSources.find((s) => s.source.toLowerCase() === value.trim().toLowerCase());
+    if (!known) return;
+    if (known.rate) {
+      setIncomeKind("hourly");
+      setRate(toInputValue(known.rate));
+    } else {
+      setIncomeKind("flat");
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const nextErrors: Record<string, string> = {};
+    const next: Record<string, string> = {};
     const parsedAmount = parseMoney(amount);
-    if (!parsedAmount) nextErrors.amount = "Enter an amount greater than 0";
-    if (type === "expense" && !categoryId) nextErrors.categoryId = "Pick a category";
-    if (type === "income" && !description.trim()) nextErrors.description = "Enter the income source";
-    const parsedHours = hours.trim() ? Number(hours.replace(",", ".")) : null;
-    if (parsedHours != null && (!Number.isFinite(parsedHours) || parsedHours < 0)) nextErrors.hours = "Invalid hours";
-    if (!date) nextErrors.date = "Pick a date";
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    if (hourly) {
+      if (!parsedHours || parsedHours <= 0) next.hours = "Enter hours worked";
+      if (!parsedRate) next.rate = "Enter the hourly rate";
+    } else if (!parsedAmount) {
+      next.amount = "Enter an amount greater than 0";
+    }
+    if (type === "expense" && !categoryId) next.categoryId = "Pick a category";
+    if (type === "income" && !description.trim()) next.description = "Enter the income source";
+    if (!date) next.date = "Pick a date";
+    setErrors(next);
+    if (Object.keys(next).length) return;
 
     startTransition(async () => {
       const res = await saveTransaction({
@@ -149,8 +195,9 @@ function TransactionForm({
         date,
         description,
         categoryId: type === "expense" ? categoryId : null,
-        amount: type === "expense" && refund ? -parsedAmount! : parsedAmount!,
-        hours: type === "income" ? parsedHours : null,
+        amount: hourly ? hourlyTotal! : type === "expense" && refund ? -parsedAmount! : parsedAmount!,
+        hours: hourly ? parsedHours : null,
+        rate: hourly ? parsedRate : null,
       });
       if (res.ok) {
         toast.success(tx ? "Transaction updated" : type === "income" ? "Income added" : refund ? "Refund added" : "Expense added");
@@ -174,6 +221,37 @@ function TransactionForm({
     });
   }
 
+  const amountField = (
+    <Field data-invalid={!!errors.amount}>
+      <FieldLabel htmlFor="tx-amount">Amount</FieldLabel>
+      <InputGroup className="h-12">
+        <InputGroupInput
+          id="tx-amount"
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0,00"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          aria-invalid={!!errors.amount}
+          className="tabular text-xl! font-semibold"
+          autoFocus={!tx && type === "expense"}
+        />
+        <InputGroupAddon align="inline-end">
+          <InputGroupText>{unit}</InputGroupText>
+        </InputGroupAddon>
+      </InputGroup>
+      <FieldError>{errors.amount}</FieldError>
+    </Field>
+  );
+
+  const dateField = (
+    <Field data-invalid={!!errors.date}>
+      <FieldLabel htmlFor="tx-date">Date</FieldLabel>
+      <Input id="tx-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-10" required />
+      <FieldError>{errors.date}</FieldError>
+    </Field>
+  );
+
   return (
     <form onSubmit={submit} noValidate>
       <FieldGroup className="gap-5">
@@ -181,7 +259,7 @@ function TransactionForm({
           type="single"
           variant="outline"
           value={type}
-          onValueChange={(v) => v && setType(v as TxType)}
+          onValueChange={(v) => v && changeType(v as TxType)}
           className="w-full"
         >
           <ToggleGroupItem value="expense" className="flex-1">
@@ -192,108 +270,148 @@ function TransactionForm({
           </ToggleGroupItem>
         </ToggleGroup>
 
-        <Field data-invalid={!!errors.amount}>
-          <FieldLabel htmlFor="tx-amount">Amount</FieldLabel>
-          <InputGroup className="h-12">
-            <InputGroupInput
-              id="tx-amount"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="0,00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              aria-invalid={!!errors.amount}
-              className="tabular text-xl! font-semibold"
-              autoFocus={!tx}
-            />
-            <InputGroupAddon align="inline-end">
-              <InputGroupText>{currency === "PLN" ? "zł" : currency}</InputGroupText>
-            </InputGroupAddon>
-          </InputGroup>
-          <FieldError>{errors.amount}</FieldError>
-        </Field>
-
         {type === "expense" ? (
-          <Field data-invalid={!!errors.categoryId}>
-            <FieldLabel>Category</FieldLabel>
-            <div role="radiogroup" aria-label="Category" className="grid grid-cols-2 gap-2">
-              {options.map((c) => {
-                const selected = categoryId === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => setCategoryId(c.id)}
-                    className={cn(
-                      "flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                      selected
-                        ? "border-foreground bg-muted font-medium"
-                        : "border-border hover:bg-muted/60",
-                    )}
-                  >
-                    <CategoryDot color={c.color} />
-                    <span className="line-clamp-2">{c.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <FieldError>{errors.categoryId}</FieldError>
-          </Field>
-        ) : null}
-
-        {type === "expense" ? (
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel htmlFor="tx-refund">Refund / money back</FieldLabel>
-              <FieldDescription>Reduces this category&apos;s spending instead of counting as income.</FieldDescription>
-            </FieldContent>
-            <Switch id="tx-refund" checked={refund} onCheckedChange={setRefund} />
-          </Field>
-        ) : null}
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field data-invalid={!!errors.date} className={type === "expense" ? "col-span-2" : undefined}>
-            <FieldLabel htmlFor="tx-date">Date</FieldLabel>
-            <Input
-              id="tx-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="h-10"
-              required
-            />
-            <FieldError>{errors.date}</FieldError>
-          </Field>
-          {type === "income" ? (
-            <Field data-invalid={!!errors.hours}>
-              <FieldLabel htmlFor="tx-hours">Hours</FieldLabel>
+          <>
+            {amountField}
+            <Field data-invalid={!!errors.categoryId}>
+              <FieldLabel>Category</FieldLabel>
+              <div role="radiogroup" aria-label="Category" className="grid grid-cols-2 gap-2">
+                {options.map((c) => {
+                  const selected = categoryId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setCategoryId(c.id)}
+                      className={cn(
+                        "flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                        selected ? "border-foreground bg-muted font-medium" : "border-border hover:bg-muted/60",
+                      )}
+                    >
+                      <CategoryDot color={c.color} />
+                      <span className="line-clamp-2">{c.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <FieldError>{errors.categoryId}</FieldError>
+            </Field>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel htmlFor="tx-refund">Refund / money back</FieldLabel>
+                <FieldDescription>Reduces this category&apos;s spending instead of counting as income.</FieldDescription>
+              </FieldContent>
+              <Switch id="tx-refund" checked={refund} onCheckedChange={setRefund} />
+            </Field>
+            {dateField}
+            <Field>
+              <FieldLabel htmlFor="tx-desc">Description</FieldLabel>
               <Input
-                id="tx-hours"
-                inputMode="decimal"
+                id="tx-desc"
                 placeholder="Optional"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
+                value={description}
+                maxLength={200}
+                onChange={(e) => setDescription(e.target.value)}
                 className="h-10"
               />
-              <FieldError>{errors.hours}</FieldError>
             </Field>
-          ) : null}
-        </div>
+          </>
+        ) : (
+          <>
+            <Field data-invalid={!!errors.description}>
+              <FieldLabel htmlFor="tx-source">Source</FieldLabel>
+              <Input
+                id="tx-source"
+                list={sourcesId}
+                placeholder="e.g. Futurum"
+                autoComplete="off"
+                value={description}
+                maxLength={200}
+                onChange={(e) => changeSource(e.target.value)}
+                className="h-10"
+                autoFocus={!tx}
+              />
+              <datalist id={sourcesId}>
+                {incomeSources.map((s) => (
+                  <option key={s.source} value={s.source} />
+                ))}
+              </datalist>
+              <FieldError>{errors.description}</FieldError>
+            </Field>
 
-        <Field data-invalid={!!errors.description}>
-          <FieldLabel htmlFor="tx-desc">{type === "income" ? "Source" : "Description"}</FieldLabel>
-          <Input
-            id="tx-desc"
-            placeholder={type === "income" ? "e.g. Salary" : "Optional"}
-            value={description}
-            maxLength={200}
-            onChange={(e) => setDescription(e.target.value)}
-            className="h-10"
-          />
-          <FieldError>{errors.description}</FieldError>
-        </Field>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              value={incomeKind}
+              onValueChange={(v) => v && setIncomeKind(v as IncomeKind)}
+              className="w-full"
+              aria-label="Income type"
+            >
+              <ToggleGroupItem value="flat" className="flex-1">
+                Flat amount
+              </ToggleGroupItem>
+              <ToggleGroupItem value="hourly" className="flex-1">
+                Hourly
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            {hourly ? (
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field data-invalid={!!errors.hours}>
+                    <FieldLabel htmlFor="tx-hours">Hours</FieldLabel>
+                    <InputGroup className="h-11">
+                      <InputGroupInput
+                        id="tx-hours"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={hours}
+                        onChange={(e) => setHours(e.target.value)}
+                        aria-invalid={!!errors.hours}
+                        className="tabular text-lg! font-semibold"
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText>h</InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    <FieldError>{errors.hours}</FieldError>
+                  </Field>
+                  <Field data-invalid={!!errors.rate}>
+                    <FieldLabel htmlFor="tx-rate">Rate</FieldLabel>
+                    <InputGroup className="h-11">
+                      <InputGroupInput
+                        id="tx-rate"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={rate}
+                        onChange={(e) => setRate(e.target.value)}
+                        aria-invalid={!!errors.rate}
+                        className="tabular text-lg! font-semibold"
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupText>{unit}/h</InputGroupText>
+                      </InputGroupAddon>
+                    </InputGroup>
+                    <FieldError>{errors.rate}</FieldError>
+                  </Field>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 text-sm">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="tabular font-semibold text-income">
+                    {hourlyTotal ? formatMoney(hourlyTotal, { currency }) : "—"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              amountField
+            )}
+
+            {dateField}
+          </>
+        )}
 
         <div className="flex gap-2 pt-1">
           {tx ? (

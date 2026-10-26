@@ -43,15 +43,27 @@ const transactionInput = z
     date: dateKey,
     description: z.string().trim().max(200),
     categoryId: z.uuid().nullable(),
-    amount: z.number().int().min(-MAX_AMOUNT).max(MAX_AMOUNT).refine((v) => v !== 0, "Amount cannot be 0"),
-    hours: z.number().min(0).max(1000).nullable(),
+    /** Ignored for hourly income, where it is computed as hours × rate. */
+    amount: z.number().int().min(-MAX_AMOUNT).max(MAX_AMOUNT),
+    hours: z.number().positive("Enter hours worked").max(1000).nullable(),
+    /** Hourly rate in minor units; set only for hourly income. */
+    rate: z.number().int().positive("Enter the hourly rate").max(MAX_AMOUNT).nullable(),
   })
-  .refine((t) => t.type === "expense" || t.amount > 0, { message: "Income must be positive", path: ["amount"] })
   .refine((t) => t.type === "income" || t.categoryId, { message: "Pick a category", path: ["categoryId"] })
   .refine((t) => t.type === "expense" || t.description.length > 0, {
     message: "Enter the income source",
     path: ["description"],
-  });
+  })
+  .refine((t) => t.type === "income" || t.rate === null, { message: "Only income can be hourly", path: ["rate"] })
+  .refine((t) => t.rate === null || t.hours !== null, { message: "Enter hours worked", path: ["hours"] })
+  .transform((t) => {
+    // Hours are stored with 2 decimals; compute the amount from that same value.
+    const hours = t.hours === null ? null : Math.round(t.hours * 100) / 100;
+    return t.rate !== null && hours !== null ? { ...t, hours, amount: Math.round(hours * t.rate) } : { ...t, hours };
+  })
+  .refine((t) => t.amount !== 0, { message: "Amount cannot be 0", path: ["amount"] })
+  .refine((t) => t.amount <= MAX_AMOUNT, { message: "Amount is too large", path: ["amount"] })
+  .refine((t) => t.type === "expense" || t.amount > 0, { message: "Income must be positive", path: ["amount"] });
 
 export type TransactionInput = z.input<typeof transactionInput>;
 
@@ -67,7 +79,9 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
       description: data.description,
       categoryId: data.categoryId,
       amount: data.amount,
-      hours: data.type === "income" && data.hours != null ? String(data.hours) : null,
+      // Hours/rate only exist on hourly income; flat income and expenses clear them.
+      hours: data.rate !== null && data.hours !== null ? String(data.hours) : null,
+      rate: data.rate,
     };
 
     if (data.id) {

@@ -124,7 +124,7 @@ export function TransactionList({
                             />
                           ) : (
                             <span className="text-xs text-muted-foreground">
-                              Income{t.hours ? ` · ${Number(t.hours)} h` : ""}
+                              Income{t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}
                             </span>
                           )}
                         </div>
@@ -172,7 +172,7 @@ export function TransactionList({
                         {t.type === "expense" && cat ? (
                           <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
                         ) : (
-                          <span className="text-muted-foreground">Income{t.hours ? ` · ${Number(t.hours)} h` : ""}</span>
+                          <span className="text-muted-foreground">Income{t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}</span>
                         )}
                       </TableCell>
                       <TableCell className="pr-4 text-right font-medium">

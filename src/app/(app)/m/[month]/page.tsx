@@ -41,7 +41,12 @@ async function MonthContent({ params, searchParams }: PageProps<"/m/[month]">) {
   const tab = typeof query.tab === "string" ? query.tab : undefined;
 
   return (
-    <TransactionEditorProvider month={month} categories={data.allCategories} currency={currency}>
+    <TransactionEditorProvider
+      month={month}
+      categories={data.allCategories}
+      currency={currency}
+      incomeSources={data.incomeSources}
+    >
       <div className="flex flex-col gap-5">
         <header className="flex items-center justify-between gap-2">
           <div className="-ml-2">

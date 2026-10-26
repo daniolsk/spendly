@@ -46,9 +46,21 @@ export type CategoryStat = {
   planned: number;
 };
 
+/** Most recent rate (or null for flat) per income source, to prefill the income form. */
+async function getIncomeSources(userId: string) {
+  const rows = await db
+    .selectDistinctOn([transaction.description], { source: transaction.description, rate: transaction.rate })
+    .from(transaction)
+    .where(and(eq(transaction.userId, userId), eq(transaction.type, "income")))
+    .orderBy(transaction.description, desc(transaction.date), desc(transaction.createdAt));
+  return rows.filter((r) => r.source);
+}
+
+export type IncomeSource = Awaited<ReturnType<typeof getIncomeSources>>[number];
+
 export async function getMonthData(userId: string, month: string) {
   const { end } = monthRange(month);
-  const [settings, categories, transactions, plans, balanceToDate] = await Promise.all([
+  const [settings, categories, transactions, plans, balanceToDate, incomeSources] = await Promise.all([
     getSettings(userId),
     getCategories(userId, { includeArchived: true }),
     getMonthTransactions(userId, month),
@@ -57,6 +69,7 @@ export async function getMonthData(userId: string, month: string) {
       .from(monthPlan)
       .where(and(eq(monthPlan.userId, userId), eq(monthPlan.month, month))),
     getBalanceUpTo(userId, end),
+    getIncomeSources(userId),
   ]);
 
   const planByCategory = new Map(plans.map((p) => [p.categoryId, p.amount]));
@@ -89,6 +102,7 @@ export async function getMonthData(userId: string, month: string) {
     categories: categories.filter((c) => !c.archived),
     allCategories: categories,
     transactions,
+    incomeSources,
     stats: {
       income,
       expenses,
