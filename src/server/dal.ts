@@ -1,0 +1,16 @@
+import "server-only";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { cache } from "react";
+import { auth } from "@/lib/auth";
+
+export const getSession = cache(async () => {
+  return auth.api.getSession({ headers: await headers() });
+});
+
+/** Returns the signed-in user or redirects to /login. Call in every page and action. */
+export const requireUser = cache(async () => {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  return session.user;
+});
