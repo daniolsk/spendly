@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { WalletIcon } from "lucide-react";
 import { BuildInfo } from "@/components/build-info";
 import { InactivityLock } from "@/components/shell/inactivity-lock";
@@ -16,12 +17,15 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-sidebar p-3 md:flex">
-        <div className="flex items-center gap-2 px-2 pt-2 font-semibold tracking-tight">
+        <Link
+          href="/"
+          className="flex items-center gap-2 self-start rounded-lg px-2 pt-2 font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <WalletIcon className="size-4" />
           </span>
           Spendly
-        </div>
+        </Link>
         <SidebarNav />
         <div className="mt-auto flex flex-col gap-1">
           <Suspense fallback={<Skeleton className="h-12 w-full" />}>
