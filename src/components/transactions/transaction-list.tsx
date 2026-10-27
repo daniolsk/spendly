@@ -145,8 +145,8 @@ export function TransactionList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-4">Description</TableHead>
-                  <TableHead className="w-56">Category</TableHead>
+                  <TableHead className="w-56 pl-4">Category</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead className="w-36 pr-4 text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
@@ -175,15 +175,15 @@ export function TransactionList({
                           }
                         }}
                       >
-                        <TableCell className="max-w-0 truncate pl-4">
-                          {t.description || <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell>
+                        <TableCell className="pl-4">
                           {t.type === "expense" && cat ? (
                             <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
                           ) : (
                             <span className="text-muted-foreground">Income{t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}</span>
                           )}
+                        </TableCell>
+                        <TableCell className="max-w-0 truncate">
+                          {t.description || <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell className="pr-4 text-right font-medium">
                           <Money value={t.amount} type={t.type} currency={currency} />
