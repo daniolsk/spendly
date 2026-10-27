@@ -15,6 +15,11 @@ import { useTransactionEditor } from "./transaction-editor";
 
 type Filter = "all" | "expense" | "income";
 
+/** Net amount: income adds, expenses (refunds are negative) subtract. */
+function signedSum(items: Transaction[]) {
+  return items.reduce((acc, t) => acc + (t.type === "income" ? t.amount : -t.amount), 0);
+}
+
 export function TransactionList({
   transactions,
   categories,
@@ -34,7 +39,7 @@ export function TransactionList({
       (filter === "all" || t.type === filter) &&
       (categoryFilter === "all" || t.categoryId === categoryFilter),
   );
-  const total = visible.reduce((acc, t) => acc + (t.type === "income" ? t.amount : -t.amount), 0);
+  const total = signedSum(visible);
 
   const groups = new Map<string, Transaction[]>();
   for (const t of visible) groups.set(t.date, [...(groups.get(t.date) ?? []), t]);
@@ -135,54 +140,62 @@ export function TransactionList({
             ))}
           </div>
 
-          {/* Desktop: table */}
+          {/* Desktop: table, one section per day */}
           <Card className="hidden py-0 md:flex">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-36 pl-4">Date</TableHead>
-                  <TableHead>Description</TableHead>
+                  <TableHead className="pl-4">Description</TableHead>
                   <TableHead className="w-56">Category</TableHead>
                   <TableHead className="w-36 pr-4 text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {visible.map((t) => {
-                  const cat = t.categoryId ? categoryById.get(t.categoryId) : undefined;
-                  return (
-                    <TableRow
-                      key={t.id}
-                      className="cursor-pointer"
-                      tabIndex={0}
-                      onClick={() => openEdit(t)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openEdit(t);
-                        }
-                      }}
-                    >
-                      <TableCell className="pl-4 text-muted-foreground tabular">{formatDay(t.date)}</TableCell>
-                      <TableCell className="max-w-0 truncate">
-                        {t.description || <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell>
-                        {t.type === "expense" && cat ? (
-                          <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
-                        ) : (
-                          <span className="text-muted-foreground">Income{t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="pr-4 text-right font-medium">
-                        <Money value={t.amount} type={t.type} currency={currency} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
+              {[...groups.entries()].map(([date, items]) => (
+                <TableBody key={date} className="border-t first-of-type:border-t-0">
+                  <TableRow className="bg-muted/60 hover:bg-muted/60">
+                    <TableCell colSpan={2} className="pl-4 font-medium">
+                      {formatDay(date)}
+                    </TableCell>
+                    <TableCell className="pr-4 text-right text-muted-foreground">
+                      <Money value={signedSum(items)} currency={currency} />
+                    </TableCell>
+                  </TableRow>
+                  {items.map((t) => {
+                    const cat = t.categoryId ? categoryById.get(t.categoryId) : undefined;
+                    return (
+                      <TableRow
+                        key={t.id}
+                        className="cursor-pointer"
+                        tabIndex={0}
+                        onClick={() => openEdit(t)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            openEdit(t);
+                          }
+                        }}
+                      >
+                        <TableCell className="max-w-0 truncate pl-4">
+                          {t.description || <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {t.type === "expense" && cat ? (
+                            <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
+                          ) : (
+                            <span className="text-muted-foreground">Income{t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="pr-4 text-right font-medium">
+                          <Money value={t.amount} type={t.type} currency={currency} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              ))}
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={3} className="pl-4">
+                  <TableCell colSpan={2} className="pl-4">
                     Total
                   </TableCell>
                   <TableCell className="pr-4 text-right">

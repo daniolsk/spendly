@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { WalletIcon } from "lucide-react";
+import { BuildInfo } from "@/components/build-info";
 import { Skeleton } from "@/components/ui/skeleton";
 import { zonedToday } from "@/lib/month";
 import { requireUser } from "@/server/dal";
@@ -26,6 +27,7 @@ export default function LandingPage() {
         </div>
         <OpenDashboardButton />
       </div>
+      <BuildInfo className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] text-center" />
     </main>
   );
 }
