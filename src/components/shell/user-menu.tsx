@@ -31,7 +31,7 @@ export function useSignOut() {
   const router = useRouter();
   return async () => {
     await authClient.signOut();
-    router.replace("/login");
+    router.replace("/");
     router.refresh();
   };
 }
