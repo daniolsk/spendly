@@ -27,7 +27,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <Suspense fallback={<Skeleton className="h-12 w-full" />}>
             <SidebarUser />
           </Suspense>
-          <BuildInfo className="px-2" />
+          <BuildInfo className="px-2 text-center" />
         </div>
       </aside>
       <main className="mx-auto w-full max-w-5xl px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-32 sm:px-6 md:pt-10 md:pb-12">
