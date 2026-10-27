@@ -32,7 +32,6 @@ src/
     (app)/m/[month]     month view: transactions, income, statistics (YYYY-MM)
     (app)/y/[year]      year statistics
     (app)/settings      categories, opening balance, account
-    login/              Google sign-in
     api/auth/[...all]   Better Auth handler
   db/schema.ts          Drizzle schema (auth + app tables)
   server/
@@ -42,7 +41,7 @@ src/
     seed.ts             default categories for new users
   lib/                  money (integer grosze), month helpers, category colors
   components/           UI (shadcn in components/ui)
-  proxy.ts              optimistic auth redirect + "/" → current month
+  proxy.ts              optimistic auth redirect to the landing page
 ```
 
 ## Conventions

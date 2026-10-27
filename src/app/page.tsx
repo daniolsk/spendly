@@ -1,7 +1,8 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRightIcon, CheckIcon, PiggyBankIcon, ReceiptTextIcon, TargetIcon, WalletIcon } from "lucide-react";
+import { CheckIcon, PiggyBankIcon, ReceiptTextIcon, TargetIcon, WalletIcon } from "lucide-react";
 import { BuildInfo } from "@/components/build-info";
+import { GoogleLogo, GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppPreview } from "@/components/landing/app-preview";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +12,7 @@ import { DashboardLink, OpenDashboardButton } from "./open-dashboard-button";
 
 const HIGHLIGHTS = ["Monthly plans per category", "Refunds & hourly income", "Year at a glance"];
 
-export default function LandingPage() {
+export default function LandingPage({ searchParams }: PageProps<"/">) {
   return (
     <div className="relative flex min-h-dvh flex-col overflow-x-clip">
       {/* Soft brand glow + dot grid, faded out towards the bottom */}
@@ -52,7 +53,7 @@ export default function LandingPage() {
 
         <div className="mt-9 flex w-full max-w-xs flex-col items-center gap-3">
           <Suspense fallback={<Skeleton className="h-12 w-full rounded-xl" />}>
-            <PrimaryAction />
+            <PrimaryAction searchParams={searchParams} />
           </Suspense>
         </div>
 
@@ -119,24 +120,40 @@ function FloatingCard({ className, children }: { className?: string; children: R
 
 async function HeaderAction() {
   const session = await getSession();
+  const className = "h-9 rounded-lg bg-background/70 px-3.5 backdrop-blur";
+  if (!session) {
+    return (
+      <GoogleSignInButton variant="outline" size="sm" className={className}>
+        Sign in
+      </GoogleSignInButton>
+    );
+  }
   return (
-    <Button asChild variant="outline" size="sm" className="h-9 rounded-lg bg-background/70 px-3.5 backdrop-blur">
-      {session ? <DashboardLink>Dashboard</DashboardLink> : <Link href="/login">Sign in</Link>}
+    <Button asChild variant="outline" size="sm" className={className}>
+      <DashboardLink>Dashboard</DashboardLink>
     </Button>
   );
 }
 
-/** Signed in: open the dashboard (and clear the inactivity lock). Signed out: go to sign-in. */
-async function PrimaryAction() {
-  const session = await getSession();
+/** Signed in: open the dashboard (and clear the inactivity lock). Signed out: Google sign-in. */
+async function PrimaryAction({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+  const [session, query] = await Promise.all([getSession(), searchParams]);
   if (!session) {
+    const error = typeof query.error === "string" ? query.error.toLowerCase() : null;
     return (
-      <Button asChild size="lg" className="group h-12 w-full gap-2 rounded-xl text-base shadow-sm">
-        <Link href="/login">
-          Sign in to continue
-          <ArrowRightIcon className="size-5 transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      </Button>
+      <>
+        <GoogleSignInButton size="lg" className="h-12 w-full gap-3 rounded-xl text-base shadow-sm">
+          <GoogleLogo className="size-5" />
+          Continue with Google
+        </GoogleSignInButton>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error.includes("forbidden") || error.includes("not_allowed") || error === "access_denied"
+              ? "This Google account is not allowed to use this app."
+              : "Sign-in failed. Please try again."}
+          </p>
+        ) : null}
+      </>
     );
   }
 

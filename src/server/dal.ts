@@ -8,9 +8,9 @@ export const getSession = cache(async () => {
   return auth.api.getSession({ headers: await headers() });
 });
 
-/** Returns the signed-in user or redirects to /login. Call in every page and action. */
+/** Returns the signed-in user or redirects to the landing page. Call in every page and action. */
 export const requireUser = cache(async () => {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/");
   return session.user;
 });

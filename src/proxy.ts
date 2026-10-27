@@ -7,9 +7,13 @@ import { currentMonthKey, zonedToday } from "@/lib/month";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // The landing page and sign-in are public.
-  if (pathname !== "/" && pathname !== "/login" && !getSessionCookie(request)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Sign-in starts from the landing page; old /login links keep working.
+  if (pathname === "/login") {
+    return NextResponse.redirect(new URL(`/${request.nextUrl.search}`, request.url));
+  }
+  // The landing page is public; everything else needs a session.
+  if (pathname !== "/" && !getSessionCookie(request)) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
   if (pathname === "/m") {
     return NextResponse.redirect(new URL(`/m/${currentMonthKey(zonedToday())}`, request.url));
