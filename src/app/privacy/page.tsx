@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <p>
         Spendly (<span className="whitespace-nowrap">spendly.danielskowron.com</span>) is a personal expense tracker operated
         by Daniel Skowron. This policy explains what data Spendly collects, how it is used and stored, and the choices you
-        have. Spendly is a private app: only Google accounts that have been explicitly invited can sign in.
+        have. Anyone with a Google account can sign up, and each account only ever sees its own data.
       </p>
 
       <Section title="Data we receive from Google">
@@ -28,8 +28,7 @@ export default function PrivacyPage() {
           <li>your Google account ID.</li>
         </List>
         <p>
-          Spendly uses this only to sign you in, to check that your email is on the list of invited accounts, and to show
-          your name and picture in the app. Google also returns sign-in tokens, which are stored with your account record.
+          Spendly uses this only to create your account, sign you in, and show your name and picture in the app. Google also returns sign-in tokens, which are stored with your account record.
           Spendly does not use them to access any other Google service, and it does not read your Gmail, contacts, files or
           calendar.
         </p>
@@ -86,9 +85,8 @@ export default function PrivacyPage() {
 
       <Section title="Storage and security">
         <p>
-          Data is stored in a managed PostgreSQL database and is always transferred over encrypted HTTPS connections. Access
-          to the app is limited to invited Google accounts, and every request is checked so that you only ever see your own
-          data.
+          Data is stored in a managed PostgreSQL database and is always transferred over encrypted HTTPS connections. Every
+          request is checked against your signed-in account, so you only ever see and change your own data.
         </p>
       </Section>
 

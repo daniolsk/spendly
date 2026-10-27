@@ -20,9 +20,9 @@ In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/
 
 Put the client ID/secret in `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 
-### Access control
+### Accounts
 
-Only emails listed in `ALLOWED_EMAILS` (comma-separated) can sign in. It is checked when an account is created **and** on every new session, so removing an email revokes sign-in. An empty list means nobody can sign in.
+Anyone with a Google account can sign up. Every account gets the default categories on first sign-in, and all queries and actions are scoped to the signed-in user.
 
 ## Project layout
 

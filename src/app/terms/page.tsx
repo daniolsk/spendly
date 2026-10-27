@@ -16,10 +16,10 @@ export default function TermsPage() {
         expense tracker operated by Daniel Skowron. By signing in and using Spendly you agree to them.
       </p>
 
-      <Section title="Access">
+      <Section title="Accounts">
         <p>
-          Spendly is a private app. You can use it only with a Google account that has been invited; other accounts cannot
-          sign in. Access can be granted or withdrawn at any time.
+          You sign up and sign in with your Google account. Each account is separate: your data is visible only to you. An
+          account that breaks these terms may be suspended or removed.
         </p>
       </Section>
 

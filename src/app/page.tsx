@@ -116,9 +116,7 @@ async function PrimaryAction({ searchParams }: Pick<PageProps<"/">, "searchParam
         </GoogleSignInButton>
         {error ? (
           <p role="alert" className="text-sm text-destructive">
-            {error.includes("forbidden") || error.includes("not_allowed") || error === "access_denied"
-              ? "This Google account is not allowed to use this app."
-              : "Sign-in failed. Please try again."}
+            {error === "access_denied" ? "Sign-in was cancelled." : "Sign-in failed. Please try again."}
           </p>
         ) : null}
       </>

@@ -2,16 +2,20 @@ import "server-only";
 import { db } from "@/db";
 import { category, userSettings } from "@/db/schema";
 
+// Generic starter set for new accounts; plans start at 0 so each user sets their own.
 const DEFAULT_CATEGORIES = [
-  { name: "Codzienne wydatki", color: "aqua", defaultPlan: 40000, excludeFromLiving: false },
-  { name: "Inne", color: "orange", defaultPlan: 200000, excludeFromLiving: true },
-  { name: "Konto wspólne", color: "violet", defaultPlan: 150000, excludeFromLiving: false },
-  { name: "Koszty stałe", color: "gray", defaultPlan: 161299, excludeFromLiving: false },
-  { name: "Samochód", color: "blue", defaultPlan: 41500, excludeFromLiving: false },
-  { name: "Oszczędności", color: "red", defaultPlan: 50000, excludeFromLiving: true },
+  { name: "Groceries", color: "aqua", excludeFromLiving: false },
+  { name: "Housing & bills", color: "gray", excludeFromLiving: false },
+  { name: "Transport", color: "blue", excludeFromLiving: false },
+  { name: "Eating out", color: "orange", excludeFromLiving: false },
+  { name: "Shopping", color: "magenta", excludeFromLiving: false },
+  { name: "Health", color: "red", excludeFromLiving: false },
+  { name: "Entertainment", color: "violet", excludeFromLiving: false },
+  { name: "Savings", color: "green", excludeFromLiving: true },
+  { name: "Other", color: "yellow", excludeFromLiving: false },
 ];
 
 export async function seedDefaultsForUser(userId: string) {
   await db.insert(userSettings).values({ userId }).onConflictDoNothing();
-  await db.insert(category).values(DEFAULT_CATEGORIES.map((c, i) => ({ ...c, userId, sortOrder: i })));
+  await db.insert(category).values(DEFAULT_CATEGORIES.map((c, i) => ({ ...c, defaultPlan: 0, userId, sortOrder: i })));
 }
