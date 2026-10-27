@@ -7,7 +7,7 @@ import { CalendarIcon, ChartColumnIcon, SettingsIcon } from "lucide-react";
 import { cn } from "cn";
 
 const NAV = [
-  { href: "/", label: "Month", icon: CalendarIcon, match: (p: string) => p === "/" || p.startsWith("/m/") },
+  { href: "/m", label: "Month", icon: CalendarIcon, match: (p: string) => p === "/m" || p.startsWith("/m/") },
   { href: "/y", label: "Year", icon: ChartColumnIcon, match: (p: string) => p.startsWith("/y") },
   { href: "/settings", label: "Settings", icon: SettingsIcon, match: (p: string) => p.startsWith("/settings") },
 ];

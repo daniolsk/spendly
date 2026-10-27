@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { WalletIcon } from "lucide-react";
+import { InactivityLock } from "@/components/shell/inactivity-lock";
 import { MobileTabBar, SidebarNav } from "@/components/shell/nav";
 import { UserMenu } from "@/components/shell/user-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +32,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         {children}
       </main>
       <MobileTabBar />
+      <InactivityLock />
     </div>
   );
 }

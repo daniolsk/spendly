@@ -10,7 +10,7 @@ export function proxy(request: NextRequest) {
   if (pathname !== "/login" && !getSessionCookie(request)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  if (pathname === "/") {
+  if (pathname === "/m") {
     return NextResponse.redirect(new URL(`/m/${currentMonthKey(zonedToday())}`, request.url));
   }
   if (pathname === "/y") {
