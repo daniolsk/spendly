@@ -7,7 +7,8 @@ import { currentMonthKey, zonedToday } from "@/lib/month";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname !== "/login" && !getSessionCookie(request)) {
+  // The landing page and sign-in are public.
+  if (pathname !== "/" && pathname !== "/login" && !getSessionCookie(request)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   if (pathname === "/m") {

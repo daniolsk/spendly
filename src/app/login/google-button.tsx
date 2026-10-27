@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { unlockApp } from "@/lib/app-lock";
 import { authClient } from "@/lib/auth-client";
 
 export function GoogleSignInButton() {
@@ -9,9 +10,11 @@ export function GoogleSignInButton() {
 
   async function signIn() {
     setPending(true);
+    // Signing in lands straight on the dashboard, so clear any inactivity lock.
+    unlockApp();
     const { error } = await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/",
+      callbackURL: "/m",
       errorCallbackURL: "/login",
     });
     if (error) setPending(false);
