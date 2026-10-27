@@ -19,7 +19,7 @@ export function MonthSwitcher({ month }: { month: string }) {
   const monthHref = (key: string) => `/m/${key}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`;
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1 max-md:w-full">
       <Button variant="ghost" size="icon-lg" asChild>
         <Link href={monthHref(shiftMonth(month, -1))} aria-label="Previous month">
           <ChevronLeftIcon />
@@ -79,8 +79,9 @@ export function MonthSwitcher({ month }: { month: string }) {
           <ChevronRightIcon />
         </Link>
       </Button>
+      {/* Right-aligned on phones, where the Income/Expense buttons are hidden. */}
       {month !== today ? (
-        <Button variant="outline" size="lg" className="ml-1 px-3" asChild>
+        <Button variant="outline" size="lg" className="px-3 max-md:ml-auto md:ml-1" asChild>
           <Link href={monthHref(today)} aria-label={`Go to ${monthLabel(today)}`}>
             Today
           </Link>
