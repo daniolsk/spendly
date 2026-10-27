@@ -1,24 +1,11 @@
 import "server-only";
 import { betterAuth } from "better-auth";
-import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { oAuthProxy } from "better-auth/plugins/oauth-proxy";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { seedDefaultsForUser } from "@/server/seed";
-
-const allowedEmails = (process.env.ALLOWED_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-/** Personal app: only explicitly allowlisted Google accounts may sign in. */
-function assertAllowed(email: string | null | undefined) {
-  if (!email || !allowedEmails.includes(email.toLowerCase())) {
-    throw new APIError("FORBIDDEN", { message: "This account is not allowed." });
-  }
-}
 
 // Vercel previews get their own URLs, which Google doesn't know. Sign-in there
 // is relayed through production (the only callback registered with Google) by
@@ -55,23 +42,9 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => {
-          assertAllowed(user.email);
-        },
+        // Any Google account can sign up; each new user starts with the default categories.
         after: async (user) => {
           await seedDefaultsForUser(user.id);
-        },
-      },
-    },
-    session: {
-      create: {
-        // Re-checked on every sign-in so removing an email from the list revokes access.
-        before: async (session) => {
-          const u = await db.query.user.findFirst({
-            where: (t, { eq }) => eq(t.id, session.userId),
-            columns: { email: true },
-          });
-          assertAllowed(u?.email);
         },
       },
     },

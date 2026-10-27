@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Spendly — notes for AI agents
 
-Personal spend tracker (single owner, Google sign-in allowlist). **It is in daily use with real financial data in the production database.** Treat every change that touches data as if it could lose someone's money history — because it can.
+Spend tracker with open Google sign-up (any Google account gets its own isolated data). **It is in daily use with real financial data in the production database.** Treat every change that touches data as if it could lose someone's money history — because it can.
 
 ## ⚠️ Data safety (read before any schema, migration, or data-writing change)
 
@@ -56,7 +56,7 @@ src/
     actions.ts           server actions: Zod-validated, re-authenticated, ownership-checked
     seed.ts              default categories for a newly created user
   lib/
-    auth.ts              Better Auth config + ALLOWED_EMAILS allowlist (checked on user and session create)
+    auth.ts              Better Auth config (Google only, open sign-up; new users are seeded with default categories)
     money.ts             format/parse integer grosze
     month.ts             YYYY-MM / YYYY-MM-DD helpers, zonedToday() (APP_TIMEZONE, default Europe/Warsaw)
     app-lock.ts          client-side inactivity lock (privacy only, not security)
@@ -77,7 +77,7 @@ src/
 
 ## Code conventions
 
-- Every page and server action calls `requireUser()`; every query/mutation filters by `userId`; actions verify ownership of referenced ids (`assertOwnCategory`).
+- Every page and server action calls `requireUser()`; every query/mutation filters by `userId`; actions verify ownership of referenced ids (`assertOwnCategory`). Sign-up is open to any Google account, so this per-user scoping is the only thing separating users' data — never skip it.
 - Actions return `ActionResult` (`{ ok } | { ok: false, error }`), use `fail()` for errors and `refresh()` after writes.
 - Match surrounding style: short comments only where intent isn't obvious, UI text in English, default category names in Polish.
 
