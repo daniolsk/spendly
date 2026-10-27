@@ -151,6 +151,29 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Thin, theme-aware scrollbars everywhere. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent) transparent;
+  }
+  /* scrollbar-color inherits, scrollbar-width does not. */
+  * {
+    scrollbar-width: thin;
+  }
+  /* Older WebKit (Safari < 18.2) ignores scrollbar-width. */
+  @supports not (scrollbar-width: thin) {
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      border-radius: 9999px;
+      background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+    }
+  }
   body {
     @apply bg-background text-foreground;
   }
