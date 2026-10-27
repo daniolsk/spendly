@@ -79,7 +79,7 @@ src/
 
 - Every page and server action calls `requireUser()`; every query/mutation filters by `userId`; actions verify ownership of referenced ids (`assertOwnCategory`). Sign-up is open to any Google account, so this per-user scoping is the only thing separating users' data — never skip it.
 - Actions return `ActionResult` (`{ ok } | { ok: false, error }`), use `fail()` for errors and `refresh()` after writes.
-- Match surrounding style: short comments only where intent isn't obvious, UI text in English, default category names in Polish.
+- Match surrounding style: short comments only where intent isn't obvious, UI text in English (including the default categories seeded for new users in `server/seed.ts`).
 
 ## Checks
 
