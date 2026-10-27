@@ -47,7 +47,7 @@ async function MonthContent({ params }: PageProps<"/m/[month]">) {
       incomeSources={data.incomeSources}
     >
       <div className="flex flex-col gap-5">
-        <header className="flex items-center justify-between gap-2">
+        <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
           <div className="-ml-2">
             <MonthSwitcher month={month} />
           </div>

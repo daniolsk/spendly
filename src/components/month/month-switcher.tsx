@@ -19,7 +19,7 @@ export function MonthSwitcher({ month }: { month: string }) {
   const monthHref = (key: string) => `/m/${key}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`;
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       <Button variant="ghost" size="icon-lg" asChild>
         <Link href={monthHref(shiftMonth(month, -1))} aria-label="Previous month">
           <ChevronLeftIcon />

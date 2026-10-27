@@ -85,6 +85,12 @@ src/
 
 No test suite yet. Before committing run `npm run lint` and `npm run typecheck` (and `npm run build` for larger changes; it needs env vars).
 
+### UI checks (every visual change)
+
+- **Match what already exists.** New controls copy the size, variant and spacing of their neighbours (e.g. buttons in one row share the same `size`; the month header uses `lg` / `icon-lg`, 36px). Reuse existing components and tokens instead of inventing new styles.
+- **Check every width, not just phone and wide desktop.** Render the change at roughly 320, 360, 390, 768, 800–900, 1024 and 1280+ px. The 768–1000px range is the riskiest: the 15rem sidebar appears at `md`, so the content area is narrowest there. No element may overflow its container or cause horizontal scroll; rows that can run out of space must wrap (`flex-wrap`) rather than push items off-screen.
+- Check both light and dark themes, and the mobile layout on an iPhone-sized viewport (the app is mobile-first).
+
 ## Workflow
 
 - After pushing work, always open a pull request and give the user its link.
