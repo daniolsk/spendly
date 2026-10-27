@@ -84,3 +84,8 @@ src/
 ## Checks
 
 No test suite yet. Before committing run `npm run lint` and `npm run typecheck` (and `npm run build` for larger changes; it needs env vars).
+
+## Workflow
+
+- After pushing work, always open a pull request and give the user its link.
+- When the change touches app code (anything that affects the running app, not just docs), also give the link to the Vercel preview deployment for that PR.
