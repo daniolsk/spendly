@@ -2,7 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { currentMonthKey, zonedToday } from "@/lib/month";
 
-const PUBLIC_PATHS = new Set(["/", "/privacy"]);
+const PUBLIC_PATHS = new Set(["/", "/privacy", "/terms"]);
 
 // Optimistic redirect only. Real authorization happens in the data access layer
 // (src/server/dal.ts) for every page and server action.
@@ -13,7 +13,7 @@ export function proxy(request: NextRequest) {
   if (pathname === "/login") {
     return NextResponse.redirect(new URL(`/${request.nextUrl.search}`, request.url));
   }
-  // The landing page and privacy policy are public; everything else needs a session.
+  // The landing page and legal pages are public; everything else needs a session.
   if (!PUBLIC_PATHS.has(pathname) && !getSessionCookie(request)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
