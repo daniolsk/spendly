@@ -160,6 +160,17 @@
   html {
     @apply font-sans;
   }
+  /* iOS Safari sizes native date inputs to their content and ignores width: 100%. */
+  @supports (-webkit-touch-callout: none) {
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      min-width: 0;
+    }
+    input[type="date"]::-webkit-date-and-time-value {
+      text-align: left;
+    }
+  }
 }
 
 @layer utilities {
