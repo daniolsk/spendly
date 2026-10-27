@@ -79,6 +79,13 @@ export function MonthSwitcher({ month }: { month: string }) {
           <ChevronRightIcon />
         </Link>
       </Button>
+      {month !== today ? (
+        <Button variant="outline" size="sm" className="ml-1" asChild>
+          <Link href={monthHref(today)} aria-label={`Go to ${monthLabel(today)}`}>
+            Today
+          </Link>
+        </Button>
+      ) : null}
     </div>
   );
 }
