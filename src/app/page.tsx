@@ -1,9 +1,10 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
-import { CheckIcon, PiggyBankIcon, ReceiptTextIcon, TargetIcon, WalletIcon } from "lucide-react";
+import { CheckIcon, WalletIcon } from "lucide-react";
 import { BuildInfo } from "@/components/build-info";
 import { GoogleLogo, GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppPreview } from "@/components/landing/app-preview";
+import { PreviewLoop } from "@/components/landing/preview-loop";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { zonedToday } from "@/lib/month";
@@ -66,54 +67,19 @@ export default function LandingPage({ searchParams }: PageProps<"/">) {
           ))}
         </ul>
 
-        <div className="relative mt-16 w-full max-w-5xl sm:mt-20">
-          <FloatingCard className="-top-8 -left-10 -rotate-3">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-[#1baf7a]/15 text-[#1baf7a]">
-              <ReceiptTextIcon className="size-4" />
-            </span>
-            <span className="flex flex-col">
-              <span className="text-xs text-muted-foreground">Expense added</span>
-              <span className="text-sm font-semibold">Biedronka · 86,40 zł</span>
-            </span>
-          </FloatingCard>
-          <FloatingCard className="bottom-24 -right-10 rotate-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-[#2a78d6]/15 text-[#2a78d6]">
-              <TargetIcon className="size-4" />
-            </span>
-            <span className="flex flex-col">
-              <span className="text-xs text-muted-foreground">Codzienne wydatki</span>
-              <span className="text-sm font-semibold">88 zł left this month</span>
-            </span>
-          </FloatingCard>
-          <FloatingCard className="-bottom-6 left-1/4 -rotate-1">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-[#6250d6]/15 text-[#6250d6] dark:text-[#9085e9]">
-              <PiggyBankIcon className="size-4" />
-            </span>
-            <span className="flex flex-col">
-              <span className="text-xs text-muted-foreground">Since start</span>
-              <span className="text-sm font-semibold">+24 155,79 zł</span>
-            </span>
-          </FloatingCard>
-
-          <AppPreview />
-          <p className="sr-only">Preview of the month view with sample data.</p>
+        <div className="relative mt-16 w-full max-w-5xl sm:mt-20 md:max-w-[70rem]">
+          {/* Phones get the static preview; the animated walkthrough needs desktop width to stay legible. */}
+          <AppPreview className="md:hidden" />
+          <div className="hidden md:block">
+            <PreviewLoop />
+          </div>
+          <p className="sr-only">Preview of Spendly with sample data: adding an expense, the month view and the year view.</p>
         </div>
       </main>
 
       <footer className="relative pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
         <BuildInfo className="text-center" />
       </footer>
-    </div>
-  );
-}
-
-function FloatingCard({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <div
-      aria-hidden
-      className={`absolute z-10 hidden items-center gap-3 rounded-xl border bg-background/90 px-3.5 py-2.5 text-left shadow-xl shadow-black/10 backdrop-blur lg:flex dark:shadow-black/40 ${className ?? ""}`}
-    >
-      {children}
     </div>
   );
 }
