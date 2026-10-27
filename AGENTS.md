@@ -85,11 +85,25 @@ src/
 
 No test suite yet. Before committing run `npm run lint` and `npm run typecheck` (and `npm run build` for larger changes; it needs env vars).
 
-### UI checks (every visual change)
+### UI checks — required before any UI work is reported as done
 
-- **Match what already exists.** New controls copy the size, variant and spacing of their neighbours (e.g. buttons in one row share the same `size`; the month header uses `lg` / `icon-lg`, 36px). Reuse existing components and tokens instead of inventing new styles.
-- **Check every width, not just phone and wide desktop.** Render the change at roughly 320, 360, 390, 768, 800–900, 1024 and 1280+ px. The 768–1000px range is the riskiest: the 15rem sidebar appears at `md`, so the content area is narrowest there. No element may overflow its container or cause horizontal scroll; rows that can run out of space must wrap (`flex-wrap`) rather than push items off-screen.
-- Check both light and dark themes, and the mobile layout on an iPhone-sized viewport (the app is mobile-first).
+The user should never be the one to find a layout bug. Do these yourself, every time a change affects what is on screen, **before** pushing the final commit or telling the user it's ready. Say in the PR's Testing section which widths/themes you checked.
+
+**1. Keep the layout consistent**
+- New elements copy the size, variant, radius and spacing of their neighbours and of similar elements elsewhere in the app. Buttons in one row share the same `size` (the month header uses `lg` / `icon-lg`, 36px); cards, tiles, inputs and paddings follow the existing patterns.
+- Reuse existing components (`components/ui/*`, `StatTile`, `CategoryDot`, `Money`, `ResponsiveDialog`, …) and theme tokens (`bg-card`, `text-muted-foreground`, `--cat-*`, …). Don't invent one-off colors, sizes or font scales.
+- Desktop changes get the equivalent mobile treatment (and vice versa) unless there is a reason not to.
+
+**2. Check responsiveness at every width**
+- Widths: **320, 360, 390** (phones), **768, 800–900** (sidebar just appeared — content area is narrowest here, the riskiest range), **1024, 1280, 1440**.
+- Pass criteria: no horizontal page scroll (`document.documentElement.scrollWidth === innerWidth`), no element outside its container, nothing clipped or overlapping, and rows that can run out of space wrap (`flex-wrap`) instead of pushing items off-screen.
+- Also check light **and** dark themes, and anything that scrolls (dialogs, sheets, tables) at a short viewport height (~700px).
+
+**3. How to check in a cloud session (no DB, no login)**
+- Start the dev server with dummy env vars: `DATABASE_URL=postgresql://u:p@localhost/db BETTER_AUTH_SECRET=<random> BETTER_AUTH_URL=http://localhost:3123 GOOGLE_CLIENT_ID=x GOOGLE_CLIENT_SECRET=y npx next dev -p 3123`.
+- Public pages (`/`, `/privacy`, `/terms`) render as-is. For app components, add a **temporary** page (e.g. `src/app/zz-preview/page.tsx`) that renders the component with sample props inside the same wrappers as the real page (`(app)/layout.tsx` uses a `15rem` sidebar from `md` and a `max-w-5xl px-4 sm:px-6` main). Pages behind `proxy.ts` need a cookie named `better-auth.session_token` (any value) to get past the optimistic redirect.
+- Use the preinstalled Playwright (`require("playwright")`, `chromium.launch()`) to loop over the widths, assert the pass criteria above, and screenshot the risky widths; look at the screenshots.
+- Delete the temporary page afterwards (and `.next/dev/types`, then `npx next typegen`) so it is never committed.
 
 ## Workflow
 
