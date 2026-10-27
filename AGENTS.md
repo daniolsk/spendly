@@ -89,3 +89,4 @@ No test suite yet. Before committing run `npm run lint` and `npm run typecheck` 
 
 - After pushing work, always open a pull request and give the user its link.
 - When the change touches app code (anything that affects the running app, not just docs), also give the link to the Vercel preview deployment for that PR.
+- When the user approves a PR in chat ("merge it", "good, merge", or similar), merge it on GitHub yourself using a merge commit (the repo's history uses "Merge pull request #N" commits), then delete its head branch if GitHub didn't already. Merge only the PR the user approved, and only when its Vercel check is green and it has no conflicts; otherwise report what is blocking. The next task restarts the working branch from the updated `main`.
