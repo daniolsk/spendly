@@ -77,7 +77,10 @@ export default function LandingPage({ searchParams }: PageProps<"/">) {
         </div>
       </main>
 
-      <footer className="relative pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+      <footer className="relative flex flex-col items-center gap-2 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        <Link href="/privacy" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+          Privacy Policy
+        </Link>
         <BuildInfo className="text-center" />
       </footer>
     </div>
