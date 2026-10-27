@@ -8,10 +8,10 @@ export function DesktopAddButtons() {
   const { openNew } = useTransactionEditor();
   return (
     <div className="hidden gap-2 md:flex">
-      <Button variant="outline" onClick={() => openNew("income")}>
+      <Button variant="outline" size="lg" onClick={() => openNew("income")}>
         <PlusIcon /> Income
       </Button>
-      <Button onClick={() => openNew("expense")}>
+      <Button size="lg" onClick={() => openNew("expense")}>
         <MinusIcon /> Expense
       </Button>
     </div>
