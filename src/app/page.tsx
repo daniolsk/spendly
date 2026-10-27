@@ -4,6 +4,7 @@ import { CheckIcon, WalletIcon } from "lucide-react";
 import { BuildInfo } from "@/components/build-info";
 import { GoogleLogo, GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AppPreview } from "@/components/landing/app-preview";
+import { LegalLinks } from "@/components/legal-page";
 import { PreviewLoop } from "@/components/landing/preview-loop";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,7 +78,8 @@ export default function LandingPage({ searchParams }: PageProps<"/">) {
         </div>
       </main>
 
-      <footer className="relative pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+      <footer className="relative flex flex-col items-center gap-2 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        <LegalLinks />
         <BuildInfo className="text-center" />
       </footer>
     </div>

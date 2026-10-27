@@ -39,9 +39,10 @@ Next.js 16 (App Router, `cacheComponents`, `proxy.ts` instead of middleware) · 
 ```
 drizzle/                 SQL migrations + meta snapshots (applied in prod — append only)
 src/
-  proxy.ts               optimistic auth redirect to "/"; /login → "/", /m → current month, /y → current year
+  proxy.ts               optimistic auth redirect to "/" (public: "/", "/privacy", "/terms"); /login → "/", /m → current month, /y → current year
   app/
     page.tsx             public landing page: Google sign-in when signed out, "Open dashboard" when signed in
+    privacy/, terms/     public legal pages (components/legal-page.tsx; linked from the landing page and Google's OAuth consent screen; keep them accurate when data handling changes)
     (app)/layout.tsx     authenticated shell (nav, user menu, inactivity lock)
     (app)/m/[month]      month view (YYYY-MM): transactions, income, stats, plan
     (app)/y/[year]       year statistics / charts
