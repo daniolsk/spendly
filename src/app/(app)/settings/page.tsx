@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { BuildInfo } from "@/components/build-info";
 import { PageHeader } from "@/components/page-header";
 import { AccountCard } from "@/components/settings/account-card";
 import { CategoryManager } from "@/components/settings/category-manager";
@@ -18,6 +19,7 @@ export default function SettingsPage() {
       <Suspense fallback={<Skeleton className="h-[32rem] rounded-xl" />}>
         <SettingsContent />
       </Suspense>
+      <BuildInfo className="text-center md:hidden" />
     </div>
   );
 }

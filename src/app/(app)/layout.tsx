@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { WalletIcon } from "lucide-react";
+import { BuildInfo } from "@/components/build-info";
 import { InactivityLock } from "@/components/shell/inactivity-lock";
 import { MobileTabBar, SidebarNav } from "@/components/shell/nav";
 import { UserMenu } from "@/components/shell/user-menu";
@@ -22,10 +23,11 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           Spendly
         </div>
         <SidebarNav />
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col gap-1">
           <Suspense fallback={<Skeleton className="h-12 w-full" />}>
             <SidebarUser />
           </Suspense>
+          <BuildInfo className="px-2" />
         </div>
       </aside>
       <main className="mx-auto w-full max-w-5xl px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-32 sm:px-6 md:pt-10 md:pb-12">
