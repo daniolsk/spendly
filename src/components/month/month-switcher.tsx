@@ -80,7 +80,7 @@ export function MonthSwitcher({ month }: { month: string }) {
         </Link>
       </Button>
       {month !== today ? (
-        <Button variant="outline" size="sm" className="ml-1" asChild>
+        <Button variant="outline" size="lg" className="ml-1 px-3" asChild>
           <Link href={monthHref(today)} aria-label={`Go to ${monthLabel(today)}`}>
             Today
           </Link>
