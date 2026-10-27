@@ -37,12 +37,14 @@ export function ResponsiveDialog({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        {/* Capped to the viewport so long forms (many categories) scroll inside the dialog; the header stays put. */}
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription className={description ? undefined : "sr-only"}>{description ?? title}</DialogDescription>
           </DialogHeader>
-          {children}
+          {/* Negative margins + padding keep focus rings from being clipped by the scroll container. */}
+          <div className="-m-1 min-h-0 overflow-y-auto overscroll-contain p-1">{children}</div>
         </DialogContent>
       </Dialog>
     );
