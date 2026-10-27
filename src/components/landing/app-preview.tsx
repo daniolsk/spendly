@@ -9,30 +9,30 @@ const DAYS = [
   {
     day: "Tue 14 Oct",
     items: [
-      { name: "Biedronka", category: "Codzienne wydatki", color: "aqua", amount: 8640 },
-      { name: "Paliwo", category: "Samochód", color: "blue", amount: 24750 },
+      { name: "Supermarket", category: "Groceries", color: "aqua", amount: 8640 },
+      { name: "Fuel", category: "Transport", color: "blue", amount: 24750 },
     ],
   },
   {
     day: "Mon 13 Oct",
     items: [
-      { name: "Konto wspólne", category: "Konto wspólne", color: "violet", amount: 50000 },
-      { name: "Kino", category: "Inne", color: "orange", amount: 5800 },
-      { name: "Zwrot · Zalando", category: "Inne · Refund", color: "orange", amount: -12999 },
+      { name: "Concert tickets", category: "Entertainment", color: "violet", amount: 50000 },
+      { name: "Dinner out", category: "Eating out", color: "orange", amount: 5800 },
+      { name: "Online order return", category: "Shopping · Refund", color: "magenta", amount: -12999 },
     ],
   },
   {
     day: "Fri 10 Oct",
-    items: [{ name: "Internet + telefon", category: "Koszty stałe", color: "gray", amount: 11900 }],
+    items: [{ name: "Internet & phone", category: "Housing & bills", color: "gray", amount: 11900 }],
   },
 ];
 
 const PLAN = [
-  { name: "Codzienne wydatki", color: "aqua", spent: 31240, plan: 40000 },
-  { name: "Koszty stałe", color: "gray", spent: 161299, plan: 161299 },
-  { name: "Samochód", color: "blue", spent: 24750, plan: 41500 },
-  { name: "Konto wspólne", color: "violet", spent: 100000, plan: 150000 },
-  { name: "Inne", color: "orange", spent: 52300, plan: 45000 },
+  { name: "Groceries", color: "aqua", spent: 31240, plan: 40000 },
+  { name: "Housing & bills", color: "gray", spent: 161299, plan: 161299 },
+  { name: "Transport", color: "blue", spent: 24750, plan: 41500 },
+  { name: "Entertainment", color: "violet", spent: 100000, plan: 150000 },
+  { name: "Eating out", color: "orange", spent: 52300, plan: 45000 },
 ];
 
 function Tile({ icon, label, value, hint }: { icon: ReactNode; label: string; value: ReactNode; hint?: string }) {

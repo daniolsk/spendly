@@ -19,28 +19,28 @@ import "./preview-loop.css";
 
 // Sample data only: the landing page is public, so it never shows real records.
 const PLAN = [
-  { name: "Codzienne wydatki", color: "aqua", spent: 31240, plan: 40000, daily: true },
-  { name: "Koszty stałe", color: "gray", spent: 161299, plan: 161299 },
-  { name: "Samochód", color: "blue", spent: 24750, plan: 41500 },
-  { name: "Konto wspólne", color: "violet", spent: 100000, plan: 150000 },
-  { name: "Inne", color: "orange", spent: 52300, plan: 45000 },
+  { name: "Groceries", color: "aqua", spent: 31240, plan: 40000, daily: true },
+  { name: "Housing & bills", color: "gray", spent: 161299, plan: 161299 },
+  { name: "Transport", color: "blue", spent: 24750, plan: 41500 },
+  { name: "Entertainment", color: "violet", spent: 100000, plan: 150000 },
+  { name: "Eating out", color: "orange", spent: 52300, plan: 45000 },
 ];
 const ROWS = [
-  { day: "Tue 14 Oct", total: null, items: [["Biedronka", "Codzienne wydatki", "aqua", -8640], ["Paliwo", "Samochód", "blue", -24750]] },
+  { day: "Tue 14 Oct", total: null, items: [["Supermarket", "Groceries", "aqua", -8640], ["Fuel", "Transport", "blue", -24750]] },
   {
     day: "Mon 13 Oct",
     total: -42801,
-    items: [["Konto wspólne", "Konto wspólne", "violet", -50000], ["Kino", "Inne", "orange", -5800], ["Zwrot · Zalando", "Inne · Refund", "orange", 12999]],
+    items: [["Concert tickets", "Entertainment", "violet", -50000], ["Dinner out", "Eating out", "orange", -5800], ["Online order return", "Shopping · Refund", "magenta", 12999]],
   },
-  { day: "Fri 10 Oct", total: -11900, items: [["Internet + telefon", "Koszty stałe", "gray", -11900]] },
+  { day: "Fri 10 Oct", total: -11900, items: [["Internet & phone", "Housing & bills", "gray", -11900]] },
 ] as const;
 const CHIPS = [
-  ["Codzienne wydatki", "aqua"],
-  ["Inne", "orange"],
-  ["Konto wspólne", "violet"],
-  ["Koszty stałe", "gray"],
-  ["Samochód", "blue"],
-  ["Oszczędności", "red"],
+  ["Groceries", "aqua"],
+  ["Housing & bills", "gray"],
+  ["Transport", "blue"],
+  ["Eating out", "orange"],
+  ["Shopping", "magenta"],
+  ["Entertainment", "violet"],
 ] as const;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"];
@@ -51,12 +51,12 @@ const chartY = (v: number) => CHART.y0 - (v / CHART.max) * (CHART.y0 - CHART.y1)
 const SLOT = (CHART.x1 - CHART.x0) / MONTHS.length;
 
 const CATS = [
-  { name: "Inne", color: "orange", v: 18200 },
-  { name: "Koszty stałe", color: "gray", v: 16130 },
-  { name: "Konto wspólne", color: "violet", v: 15000 },
-  { name: "Codzienne wydatki", color: "aqua", v: 9870 },
-  { name: "Oszczędności", color: "red", v: 7000 },
-  { name: "Samochód", color: "blue", v: 6427 },
+  { name: "Eating out", color: "orange", v: 18200 },
+  { name: "Housing & bills", color: "gray", v: 16130 },
+  { name: "Entertainment", color: "violet", v: 15000 },
+  { name: "Groceries", color: "aqua", v: 9870 },
+  { name: "Savings", color: "green", v: 7000 },
+  { name: "Transport", color: "blue", v: 6427 },
 ];
 const CAT_TOTAL = CATS.reduce((s, c) => s + c.v, 0);
 const RADIUS = 50;
@@ -213,7 +213,7 @@ export function PreviewLoop() {
       q("amountPh").hidden = false;
       q("descPh").hidden = false;
       q("chartCard").classList.remove("pl-dim");
-      q("f1v").textContent = "Biedronka · 86,40 zł";
+      q("f1v").textContent = "Supermarket · 86,40 zł";
       q("f2v").textContent = `${zl(DAILY_PLAN - START.daily)} left this month`;
       q("f3v").textContent = `+${zl(START.since)}`;
       placeCursor(940, 600);
@@ -247,7 +247,7 @@ export function PreviewLoop() {
         await moveTo(q("inDesc"), 450, -80);
         await click();
         q("inDesc").classList.add("pl-focus");
-        await type(q("descText"), "Żabka", q("descPh"));
+        await type(q("descText"), "Corner shop", q("descPh"));
         await wait(300);
         await moveTo(q("submit"), 550);
         await click(q("submit"));
@@ -260,7 +260,7 @@ export function PreviewLoop() {
         q("toast").classList.add("pl-on");
         q("newwrap").classList.add("pl-open");
         q("newrow").classList.add("pl-fresh");
-        pop("f1", "Żabka · 42,90 zł");
+        pop("f1", "Corner shop · 42,90 zł");
         q("fillDaily").style.width = `${pct(START.daily + ADDED, DAILY_PLAN)}%`;
         await tween(1100, (t) => {
           const d = Math.round(ADDED * t);
@@ -338,7 +338,7 @@ export function PreviewLoop() {
             <TargetIcon />
           </div>
           <div className="pl-float-t">
-            <span>Codzienne wydatki</span>
+            <span>Groceries</span>
             <b data-pl="f2v" />
           </div>
         </div>
@@ -412,7 +412,7 @@ export function PreviewLoop() {
                         {gi === 0 ? (
                           <div className="pl-newwrap" data-pl="newwrap">
                             <div>
-                              <Row name="Żabka" category="Codzienne wydatki" color="aqua" amount={-ADDED} dataPl="newrow" />
+                              <Row name="Corner shop" category="Groceries" color="aqua" amount={-ADDED} dataPl="newrow" />
                             </div>
                           </div>
                         ) : null}
