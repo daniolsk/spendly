@@ -43,8 +43,9 @@ export function ResponsiveDialog({
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription className={description ? undefined : "sr-only"}>{description ?? title}</DialogDescription>
           </DialogHeader>
-          {/* Negative margins + padding keep focus rings from being clipped by the scroll container. */}
-          <div className="-m-1 min-h-0 overflow-y-auto overscroll-contain p-1">{children}</div>
+          {/* Negative margins + padding keep focus rings from being clipped. overflow-x-hidden stops the
+              switch's enlarged hit area (::after, -inset-x-3) at the right edge from adding a horizontal scrollbar. */}
+          <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain p-1">{children}</div>
         </DialogContent>
       </Dialog>
     );
