@@ -74,6 +74,7 @@ src/
 - "Cost of living" excludes categories with `excludeFromLiving`.
 - "Balance since start" = `user_settings.openingBalance` + all income − all expenses up to the end of that month.
 - Archived categories are hidden from pickers but keep their history.
+- Per-user caps in `lib/limits.ts` (transactions per month / per 24 h / total, categories, plan months) are checked in the server actions before inserts and shown in Settings. They exist only to stop abuse — keep them far above real use; any new kind of user-created data needs a cap too.
 
 ## Code conventions
 

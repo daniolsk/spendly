@@ -5,10 +5,12 @@ import { PageHeader } from "@/components/page-header";
 import { AccountCard } from "@/components/settings/account-card";
 import { CategoryManager } from "@/components/settings/category-manager";
 import { OpeningBalanceForm } from "@/components/settings/opening-balance-form";
+import { UsageLimits } from "@/components/settings/usage-limits";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { currentMonthKey, zonedToday } from "@/lib/month";
 import { requireUser } from "@/server/dal";
-import { getCategories, getSettings } from "@/server/queries";
+import { getCategories, getSettings, getUsage } from "@/server/queries";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -26,9 +28,11 @@ export default function SettingsPage() {
 
 async function SettingsContent() {
   const user = await requireUser();
-  const [categories, settings] = await Promise.all([
+  const month = currentMonthKey(zonedToday());
+  const [categories, settings, usage] = await Promise.all([
     getCategories(user.id, { includeArchived: true }),
     getSettings(user.id),
+    getUsage(user.id, month),
   ]);
 
   return (
@@ -58,6 +62,15 @@ async function SettingsContent() {
           </CardHeader>
           <CardContent>
             <AccountCard user={{ name: user.name, email: user.email, image: user.image }} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Usage limits</CardTitle>
+            <CardDescription>Caps that protect the service from abuse. Everyday use stays far below them.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UsageLimits usage={usage} month={month} />
           </CardContent>
         </Card>
       </div>
