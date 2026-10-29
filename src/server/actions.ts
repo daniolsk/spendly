@@ -1,13 +1,15 @@
 "use server";
 
 import "server-only";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { category, monthPlan, transaction, userSettings } from "@/db/schema";
 import { CATEGORY_COLOR_KEYS } from "@/lib/colors";
+import { LIMITS } from "@/lib/limits";
+import { monthRange } from "@/lib/month";
 import { requireUser } from "./dal";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -32,9 +34,38 @@ async function assertOwnCategory(userId: string, categoryId: string) {
   if (!row) throw new z.ZodError([{ code: "custom", message: "Unknown category", path: ["categoryId"], input: categoryId }]);
 }
 
+const n = (v: number) => v.toLocaleString("en-US");
+
 // ---------------------------------------------------------------------------
 // Transactions
 // ---------------------------------------------------------------------------
+
+/**
+ * Checks the per-user transaction caps (see lib/limits.ts) before a write.
+ * New transactions count against every cap; an edit only against the month it
+ * moves into (`excludeId` keeps it from counting itself). Returns an error or null.
+ */
+async function checkTransactionLimits(userId: string, date: string, excludeId?: string) {
+  const { start, end } = monthRange(date.slice(0, 7));
+  const inMonth = and(gte(transaction.date, start), lte(transaction.date, end), excludeId ? ne(transaction.id, excludeId) : undefined);
+  const [row] = await db
+    .select({
+      month: sql<number>`count(*) filter (where ${inMonth})`.mapWith(Number),
+      day: sql<number>`count(*) filter (where ${transaction.createdAt} > now() - interval '24 hours')`.mapWith(Number),
+      total: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(transaction)
+    .where(eq(transaction.userId, userId));
+
+  if (row.month >= LIMITS.transactionsPerMonth)
+    return `A month can have at most ${n(LIMITS.transactionsPerMonth)} transactions.`;
+  if (excludeId) return null;
+  if (row.day >= LIMITS.transactionsPerDay)
+    return `You can add at most ${n(LIMITS.transactionsPerDay)} transactions in 24 hours. Try again later.`;
+  if (row.total >= LIMITS.transactionsTotal)
+    return `You've reached the limit of ${n(LIMITS.transactionsTotal)} transactions.`;
+  return null;
+}
 
 const transactionInput = z
   .object({
@@ -72,6 +103,8 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
     const user = await requireUser();
     const data = transactionInput.parse(input);
     if (data.categoryId) await assertOwnCategory(user.id, data.categoryId);
+    const limitError = await checkTransactionLimits(user.id, data.date, data.id);
+    if (limitError) return { ok: false, error: limitError };
 
     const values = {
       type: data.type,
@@ -140,10 +173,15 @@ export async function saveCategory(input: CategoryInput): Promise<ActionResult> 
         .returning({ id: category.id });
       if (updated.length === 0) return { ok: false, error: "Category not found" };
     } else {
-      const [{ next }] = await db
-        .select({ next: sql<number>`coalesce(max(${category.sortOrder}), -1) + 1`.mapWith(Number) })
+      const [{ next, count }] = await db
+        .select({
+          next: sql<number>`coalesce(max(${category.sortOrder}), -1) + 1`.mapWith(Number),
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
         .from(category)
         .where(eq(category.userId, user.id));
+      if (count >= LIMITS.categories)
+        return { ok: false, error: `You can have at most ${n(LIMITS.categories)} categories, archived ones included.` };
       await db.insert(category).values({ ...data, userId: user.id, sortOrder: next });
     }
     refresh();
@@ -235,6 +273,18 @@ export async function saveMonthPlan(input: z.input<typeof planInput>): Promise<A
     );
     const valid = entries.filter((e) => owned.has(e.categoryId));
     if (valid.length !== entries.length) return { ok: false, error: "Unknown category" };
+
+    if (valid.length) {
+      const [{ months, hasThis }] = await db
+        .select({
+          months: sql<number>`count(distinct ${monthPlan.month})`.mapWith(Number),
+          hasThis: sql<boolean>`bool_or(${monthPlan.month} = ${month})`.mapWith(Boolean),
+        })
+        .from(monthPlan)
+        .where(eq(monthPlan.userId, user.id));
+      if (!hasThis && months >= LIMITS.planMonths)
+        return { ok: false, error: `At most ${n(LIMITS.planMonths)} months can have a custom plan.` };
+    }
 
     await db.batch([
       db.delete(monthPlan).where(and(eq(monthPlan.userId, user.id), eq(monthPlan.month, month))),

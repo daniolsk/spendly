@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { category, monthPlan, transaction, userSettings, type Category } from "@/db/schema";
+import type { Usage } from "@/lib/limits";
 import { daysInMonth, monthRange } from "@/lib/month";
 
 // Every function here takes the authenticated userId and scopes all queries by it.
@@ -200,4 +201,31 @@ export async function getTrackedYears(userId: string) {
     .from(transaction)
     .where(eq(transaction.userId, userId));
   return rows.map((r) => r.year).sort((a, b) => b - a);
+}
+
+/** Current usage against the per-user limits in lib/limits.ts. */
+export async function getUsage(userId: string, month: string): Promise<Usage> {
+  const { start, end } = monthRange(month);
+  const [[tx], [cat], [plan]] = await Promise.all([
+    db
+      .select({
+        month: sql<number>`count(*) filter (where ${transaction.date} between ${start} and ${end})`.mapWith(Number),
+        day: sql<number>`count(*) filter (where ${transaction.createdAt} > now() - interval '24 hours')`.mapWith(Number),
+        total: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(transaction)
+      .where(eq(transaction.userId, userId)),
+    db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(category).where(eq(category.userId, userId)),
+    db
+      .select({ count: sql<number>`count(distinct ${monthPlan.month})`.mapWith(Number) })
+      .from(monthPlan)
+      .where(eq(monthPlan.userId, userId)),
+  ]);
+  return {
+    transactionsThisMonth: tx.month,
+    transactionsToday: tx.day,
+    transactionsTotal: tx.total,
+    categories: cat.count,
+    planMonths: plan.count,
+  };
 }
