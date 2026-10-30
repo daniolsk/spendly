@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowDownLeftIcon, ReceiptIcon } from "lucide-react";
+import { cn } from "cn";
 import type { Category, Transaction } from "@/db/schema";
 import { CategoryDot, CategoryLabel } from "@/components/category-dot";
 import { Money } from "@/components/money";
@@ -15,6 +16,10 @@ import { formatDay, todayKey } from "@/lib/month";
 import { useTransactionEditor } from "./transaction-editor";
 
 type Filter = "all" | "expense" | "income";
+
+/** Accent bar down the left edge of today's rows; overlaps the row border above so it reads as one line. */
+const TODAY_BAR =
+  "relative before:absolute before:-top-px before:bottom-0 before:left-0 before:w-[3px] before:bg-primary";
 
 /** Net amount: income adds, expenses (refunds are negative) subtract. */
 function signedSum(items: Transaction[]) {
@@ -172,11 +177,9 @@ export function TransactionList({
               {[...groups.entries()].map(([date, items]) => (
                 <TableBody
                   key={date}
-                  className="group/today border-t first-of-type:border-t-0 data-[today=true]:[&_td]:bg-primary/5"
-                  data-today={date === today}
-                >
-                  <TableRow className="bg-muted/60 hover:bg-muted/60 group-data-[today=true]/today:bg-primary/5 group-data-[today=true]/today:hover:bg-primary/5">
-                    <TableCell colSpan={2} className="pl-4 font-medium">
+                  className="border-t first-of-type:border-t-0">
+                  <TableRow className="bg-muted/60 hover:bg-muted/60">
+                    <TableCell colSpan={2} className={cn("pl-4 font-medium", date === today && TODAY_BAR)}>
                       <span className="flex items-center gap-2">
                         {formatDay(date)}
                         {date === today ? <TodayBadge /> : null}
@@ -201,7 +204,7 @@ export function TransactionList({
                           }
                         }}
                       >
-                        <TableCell className="pl-4">
+                        <TableCell className={cn("pl-4", date === today && TODAY_BAR)}>
                           {t.type === "expense" && cat ? (
                             <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
                           ) : (
