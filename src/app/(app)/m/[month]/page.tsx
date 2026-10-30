@@ -47,11 +47,14 @@ async function MonthContent({ params }: PageProps<"/m/[month]">) {
       incomeSources={data.incomeSources}
     >
       <div className="flex flex-col gap-5">
-        <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
-          <div className="-ml-2 max-md:flex-1">
-            <MonthSwitcher month={month} />
+        {/* Side by side when there is room; otherwise the add buttons take their own full-width row. */}
+        <header className="@container/month-header">
+          <div className="flex flex-col gap-3 @2xl/month-header:flex-row @2xl/month-header:items-center @2xl/month-header:justify-between">
+            <div className="-ml-2">
+              <MonthSwitcher month={month} />
+            </div>
+            <DesktopAddButtons />
           </div>
-          <DesktopAddButtons />
         </header>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

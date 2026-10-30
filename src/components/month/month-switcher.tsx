@@ -23,7 +23,7 @@ export function MonthSwitcher({ month }: { month: string }) {
   const todayIsBehind = today < month;
 
   return (
-    <div className="flex flex-wrap items-center gap-1 max-md:w-full">
+    <div className="flex items-center gap-1 max-md:w-full">
       <Button variant="ghost" size="icon-lg" asChild>
         <Link href={monthHref(shiftMonth(month, -1))} aria-label="Previous month">
           <ChevronLeftIcon />
@@ -88,12 +88,12 @@ export function MonthSwitcher({ month }: { month: string }) {
           <ChevronRightIcon />
         </Link>
       </Button>
-      {/* Quiet shortcut back to the current month; right-aligned on phones, where the Income/Expense buttons are hidden. */}
+      {/* Quiet shortcut back to the current month. Phones skip it: there is no room, and the Month tab does the same. */}
       {month !== today ? (
         <Button
           variant="ghost"
           size="lg"
-          className="text-muted-foreground hover:text-foreground max-md:ml-auto md:ml-1"
+          className="ml-1 text-muted-foreground hover:text-foreground max-sm:hidden"
           asChild
         >
           <Link href={monthHref(today)} aria-label={`Back to ${monthLabel(today)}`}>

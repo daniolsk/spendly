@@ -160,11 +160,12 @@ export function TransactionList({
                 </TableRow>
               </TableHeader>
               {[...groups.entries()].map(([date, items]) => (
-                <TableBody key={date} className="border-t first-of-type:border-t-0">
-                  <TableRow
-                    className="bg-muted/60 hover:bg-muted/60 data-[today=true]:bg-primary/10 data-[today=true]:hover:bg-primary/10"
-                    data-today={date === today}
-                  >
+                <TableBody
+                  key={date}
+                  className="group/today border-t first-of-type:border-t-0 data-[today=true]:[&_td]:bg-primary/5"
+                  data-today={date === today}
+                >
+                  <TableRow className="bg-muted/60 hover:bg-muted/60 group-data-[today=true]/today:bg-primary/5 group-data-[today=true]/today:hover:bg-primary/5">
                     <TableCell colSpan={2} className="pl-4 font-medium">
                       <span className="flex items-center gap-2">
                         {formatDay(date)}
