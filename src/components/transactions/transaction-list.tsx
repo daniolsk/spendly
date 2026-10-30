@@ -5,12 +5,13 @@ import { ArrowDownLeftIcon, ReceiptIcon } from "lucide-react";
 import type { Category, Transaction } from "@/db/schema";
 import { CategoryDot, CategoryLabel } from "@/components/category-dot";
 import { Money } from "@/components/money";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { formatDay } from "@/lib/month";
+import { formatDay, todayKey } from "@/lib/month";
 import { useTransactionEditor } from "./transaction-editor";
 
 type Filter = "all" | "expense" | "income";
@@ -43,6 +44,8 @@ export function TransactionList({
 
   const groups = new Map<string, Transaction[]>();
   for (const t of visible) groups.set(t.date, [...(groups.get(t.date) ?? []), t]);
+
+  const today = todayKey();
 
   const usedCategories = categories.filter((c) => transactions.some((t) => t.categoryId === c.id));
 
@@ -103,8 +106,14 @@ export function TransactionList({
           <div className="flex flex-col gap-4 md:hidden">
             {[...groups.entries()].map(([date, items]) => (
               <section key={date} className="flex flex-col gap-1.5">
-                <h3 className="px-1 text-xs font-medium text-muted-foreground">{formatDay(date)}</h3>
-                <Card className="gap-0 py-0">
+                <h3
+                  className="flex items-center gap-1.5 px-1 text-xs font-medium text-muted-foreground data-[today=true]:text-foreground"
+                  data-today={date === today}
+                >
+                  {formatDay(date)}
+                  {date === today ? <TodayBadge /> : null}
+                </h3>
+                <Card className="gap-0 py-0 data-[today=true]:ring-primary/40" data-today={date === today}>
                   {items.map((t, i) => {
                     const cat = t.categoryId ? categoryById.get(t.categoryId) : undefined;
                     const subtitle =
@@ -152,9 +161,15 @@ export function TransactionList({
               </TableHeader>
               {[...groups.entries()].map(([date, items]) => (
                 <TableBody key={date} className="border-t first-of-type:border-t-0">
-                  <TableRow className="bg-muted/60 hover:bg-muted/60">
+                  <TableRow
+                    className="bg-muted/60 hover:bg-muted/60 data-[today=true]:bg-primary/10 data-[today=true]:hover:bg-primary/10"
+                    data-today={date === today}
+                  >
                     <TableCell colSpan={2} className="pl-4 font-medium">
-                      {formatDay(date)}
+                      <span className="flex items-center gap-2">
+                        {formatDay(date)}
+                        {date === today ? <TodayBadge /> : null}
+                      </span>
                     </TableCell>
                     <TableCell className="pr-4 text-right text-muted-foreground">
                       <Money value={signedSum(items)} currency={currency} />
@@ -209,4 +224,8 @@ export function TransactionList({
       )}
     </div>
   );
+}
+
+function TodayBadge() {
+  return <Badge className="h-4.5 px-1.5 text-[0.7rem]">Today</Badge>;
 }
