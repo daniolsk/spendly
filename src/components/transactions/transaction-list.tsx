@@ -51,11 +51,13 @@ export function TransactionList({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Phones: filters and the category picker each get a full-width line, the summary sits right above the list. */}
       <div className="flex flex-wrap items-center gap-2">
         <ToggleGroup
           type="single"
           variant="outline"
           size="sm"
+          className="max-sm:w-full"
           value={filter}
           onValueChange={(v) => {
             if (!v) return;
@@ -63,13 +65,19 @@ export function TransactionList({
             if (v === "income") setCategoryFilter("all");
           }}
         >
-          <ToggleGroupItem value="all">All</ToggleGroupItem>
-          <ToggleGroupItem value="expense">Expenses</ToggleGroupItem>
-          <ToggleGroupItem value="income">Income</ToggleGroupItem>
+          <ToggleGroupItem value="all" className="max-sm:flex-1">
+            All
+          </ToggleGroupItem>
+          <ToggleGroupItem value="expense" className="max-sm:flex-1">
+            Expenses
+          </ToggleGroupItem>
+          <ToggleGroupItem value="income" className="max-sm:flex-1">
+            Income
+          </ToggleGroupItem>
         </ToggleGroup>
         {filter !== "income" && usedCategories.length > 0 ? (
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger size="sm" className="min-w-40" aria-label="Filter by category">
+            <SelectTrigger size="sm" className="min-w-40 max-sm:w-full" aria-label="Filter by category">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -82,7 +90,7 @@ export function TransactionList({
             </SelectContent>
           </Select>
         ) : null}
-        <div className="ml-auto text-sm text-muted-foreground">
+        <div className="ml-auto text-sm text-muted-foreground max-sm:w-full max-sm:text-right">
           {visible.length} {visible.length === 1 ? "item" : "items"} ·{" "}
           <Money value={total} currency={currency} className="font-medium text-foreground" />
         </div>
