@@ -25,7 +25,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
+import { evaluate, isExpression } from "@/lib/calc";
 import { currentMonthKey, todayKey } from "@/lib/month";
+import { workingDays } from "@/lib/working-days";
 import { deleteTransaction, saveTransaction } from "@/server/actions";
 import type { IncomeSource } from "@/server/queries";
 
@@ -107,9 +109,19 @@ function defaultDate(month: string, type: TxType) {
   return month === currentMonthKey() ? todayKey() : `${month}-01`;
 }
 
+/** Accepts arithmetic like "20*8"; rounded to the 0.01 h the DB stores. */
 function parseHours(input: string) {
-  const v = Number(input.trim().replace(",", "."));
-  return input.trim() && Number.isFinite(v) ? v : null;
+  const v = evaluate(input);
+  return v === null ? null : Math.round(v * 100) / 100;
+}
+
+function formatHours(v: number) {
+  return String(v).replace(".", ",");
+}
+
+/** Full-time hours for the date's month: Polish working days × 8. */
+function defaultHours(date: string) {
+  return `${workingDays(date.slice(0, 7))}*8`;
 }
 
 function TransactionForm({
@@ -137,7 +149,7 @@ function TransactionForm({
   const [date, setDate] = useState(tx?.date ?? defaultDate(month, initialType));
   const [description, setDescription] = useState(tx?.description ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(tx?.categoryId ?? null);
-  const [hours, setHours] = useState(tx?.hours ? String(Number(tx.hours)).replace(".", ",") : "");
+  const [hours, setHours] = useState(tx?.hours ? formatHours(Number(tx.hours)) : tx ? "" : defaultHours(date));
   const [rate, setRate] = useState(tx?.rate ? toInputValue(tx.rate) : "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
@@ -145,17 +157,23 @@ function TransactionForm({
   const hourly = type === "income" && incomeKind === "hourly";
   const parsedHours = parseHours(hours);
   const parsedRate = rate.trim() ? parseMoney(rate) : null;
-  const hourlyTotal =
-    parsedHours && parsedRate ? Math.round((Math.round(parsedHours * 100) / 100) * parsedRate) : null;
+  const hourlyTotal = parsedHours && parsedRate ? Math.round(parsedHours * parsedRate) : null;
+  const hoursIsDefault = !tx && hours === defaultHours(date);
 
   // Archived categories stay selectable only for the transaction that already uses them.
   const options = categories.filter((c) => !c.archived || c.id === tx?.categoryId);
   const unit = currency === "PLN" ? "zł" : currency;
 
+  function changeDate(next: string) {
+    // Untouched default hours follow the month of the picked date.
+    if (hoursIsDefault && next) setHours(defaultHours(next));
+    setDate(next);
+  }
+
   function changeType(next: TxType) {
     setType(next);
     // Income usually lands on the 1st; keep a user-picked date otherwise.
-    if (!tx && date === defaultDate(month, type)) setDate(defaultDate(month, next));
+    if (!tx && date === defaultDate(month, type)) changeDate(defaultDate(month, next));
   }
 
   /** Picking a known source restores how it was paid last time. */
@@ -247,7 +265,7 @@ function TransactionForm({
   const dateField = (
     <Field data-invalid={!!errors.date}>
       <FieldLabel htmlFor="tx-date">Date</FieldLabel>
-      <Input id="tx-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-10" required />
+      <Input id="tx-date" type="date" value={date} onChange={(e) => changeDate(e.target.value)} className="h-10" required />
       <FieldError>{errors.date}</FieldError>
     </Field>
   );
@@ -366,10 +384,14 @@ function TransactionForm({
                     <InputGroup className="h-11">
                       <InputGroupInput
                         id="tx-hours"
-                        inputMode="decimal"
+                        inputMode="text"
+                        autoComplete="off"
                         placeholder="0"
                         value={hours}
                         onChange={(e) => setHours(e.target.value)}
+                        onBlur={() => {
+                          if (!hoursIsDefault && isExpression(hours) && parsedHours !== null) setHours(formatHours(parsedHours));
+                        }}
                         aria-invalid={!!errors.hours}
                         className="tabular text-lg! font-semibold"
                       />
@@ -377,6 +399,11 @@ function TransactionForm({
                         <InputGroupText>h</InputGroupText>
                       </InputGroupAddon>
                     </InputGroup>
+                    {isExpression(hours) && parsedHours !== null && !errors.hours ? (
+                      <FieldDescription className="tabular">
+                        = {formatHours(parsedHours)} h{hoursIsDefault ? ` (${workingDays(date.slice(0, 7))} working days)` : ""}
+                      </FieldDescription>
+                    ) : null}
                     <FieldError>{errors.hours}</FieldError>
                   </Field>
                   <Field data-invalid={!!errors.rate}>
