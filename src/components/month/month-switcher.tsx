@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,9 +17,13 @@ export function MonthSwitcher({ month }: { month: string }) {
   // Keep the open tab (Transactions / Income / Statistics) when moving between months.
   const tab = useSearchParams().get("tab");
   const monthHref = (key: string) => `/m/${key}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`;
+  // Name the current month (with its year when it differs) and point the arrow the way it lies.
+  const todayName =
+    parseMonthKey(today).year === year ? monthName(parseMonthKey(today).month, "long") : monthLabel(today, "short");
+  const todayIsBehind = today < month;
 
   return (
-    <div className="flex flex-wrap items-center gap-1 max-md:w-full">
+    <div className="flex items-center gap-1 max-md:w-full">
       <Button variant="ghost" size="icon-lg" asChild>
         <Link href={monthHref(shiftMonth(month, -1))} aria-label="Previous month">
           <ChevronLeftIcon />
@@ -72,6 +76,11 @@ export function MonthSwitcher({ month }: { month: string }) {
               );
             })}
           </div>
+          <Button asChild variant="outline" size="sm" className="mt-3 h-9 w-full">
+            <Link href={monthHref(today)} onClick={() => setOpen(false)}>
+              This month
+            </Link>
+          </Button>
         </PopoverContent>
       </Popover>
       <Button variant="ghost" size="icon-lg" asChild>
@@ -79,11 +88,18 @@ export function MonthSwitcher({ month }: { month: string }) {
           <ChevronRightIcon />
         </Link>
       </Button>
-      {/* Right-aligned on phones, where the Income/Expense buttons are hidden. */}
+      {/* Quiet shortcut back to the current month. Phones skip it: there is no room, and the Month tab does the same. */}
       {month !== today ? (
-        <Button variant="outline" size="lg" className="px-3 max-md:ml-auto md:ml-1" asChild>
-          <Link href={monthHref(today)} aria-label={`Go to ${monthLabel(today)}`}>
-            Today
+        <Button
+          variant="ghost"
+          size="lg"
+          className="ml-1 text-muted-foreground hover:text-foreground max-sm:hidden"
+          asChild
+        >
+          <Link href={monthHref(today)} aria-label={`Back to ${monthLabel(today)}`}>
+            {todayIsBehind ? <ArrowLeftIcon data-icon="inline-start" /> : null}
+            {todayName}
+            {todayIsBehind ? null : <ArrowRightIcon data-icon="inline-end" />}
           </Link>
         </Button>
       ) : null}

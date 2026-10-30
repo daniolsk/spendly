@@ -2,18 +2,24 @@
 
 import { useState } from "react";
 import { ArrowDownLeftIcon, ReceiptIcon } from "lucide-react";
+import { cn } from "cn";
 import type { Category, Transaction } from "@/db/schema";
 import { CategoryDot, CategoryLabel } from "@/components/category-dot";
 import { Money } from "@/components/money";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { formatDay } from "@/lib/month";
+import { formatDay, todayKey } from "@/lib/month";
 import { useTransactionEditor } from "./transaction-editor";
 
 type Filter = "all" | "expense" | "income";
+
+/** Accent bar down the left edge of today's rows; overlaps the row border above so it reads as one line. */
+const TODAY_BAR =
+  "relative before:absolute before:-top-px before:bottom-0 before:left-0 before:w-[3px] before:bg-primary";
 
 /** Net amount: income adds, expenses (refunds are negative) subtract. */
 function signedSum(items: Transaction[]) {
@@ -44,44 +50,56 @@ export function TransactionList({
   const groups = new Map<string, Transaction[]>();
   for (const t of visible) groups.set(t.date, [...(groups.get(t.date) ?? []), t]);
 
+  const today = todayKey();
+
   const usedCategories = categories.filter((c) => transactions.some((t) => t.categoryId === c.id));
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={filter}
-          onValueChange={(v) => {
-            if (!v) return;
-            setFilter(v as Filter);
-            if (v === "income") setCategoryFilter("all");
-          }}
-        >
-          <ToggleGroupItem value="all">All</ToggleGroupItem>
-          <ToggleGroupItem value="expense">Expenses</ToggleGroupItem>
-          <ToggleGroupItem value="income">Income</ToggleGroupItem>
-        </ToggleGroup>
-        {filter !== "income" && usedCategories.length > 0 ? (
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger size="sm" className="min-w-40" aria-label="Filter by category">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {usedCategories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  <CategoryLabel name={c.name} color={c.color} />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-        <div className="ml-auto text-sm text-muted-foreground">
-          {visible.length} {visible.length === 1 ? "item" : "items"} ·{" "}
-          <Money value={total} currency={currency} className="font-medium text-foreground" />
+      {/* When one row doesn't fit, the filters and the category picker each get a full-width line and the summary sits right above the list. */}
+      <div className="@container/filters">
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            className="@max-xl/filters:w-full"
+            value={filter}
+            onValueChange={(v) => {
+              if (!v) return;
+              setFilter(v as Filter);
+              if (v === "income") setCategoryFilter("all");
+            }}
+          >
+            <ToggleGroupItem value="all" className="@max-xl/filters:flex-1">
+              All
+            </ToggleGroupItem>
+            <ToggleGroupItem value="expense" className="@max-xl/filters:flex-1">
+              Expenses
+            </ToggleGroupItem>
+            <ToggleGroupItem value="income" className="@max-xl/filters:flex-1">
+              Income
+            </ToggleGroupItem>
+          </ToggleGroup>
+          {filter !== "income" && usedCategories.length > 0 ? (
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger size="sm" className="min-w-40 @max-xl/filters:w-full" aria-label="Filter by category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {usedCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <CategoryLabel name={c.name} color={c.color} />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          <div className="ml-auto text-sm text-muted-foreground @max-xl/filters:w-full @max-xl/filters:text-right">
+            {visible.length} {visible.length === 1 ? "item" : "items"} ·{" "}
+            <Money value={total} currency={currency} className="font-medium text-foreground" />
+          </div>
         </div>
       </div>
 
@@ -103,8 +121,14 @@ export function TransactionList({
           <div className="flex flex-col gap-4 md:hidden">
             {[...groups.entries()].map(([date, items]) => (
               <section key={date} className="flex flex-col gap-1.5">
-                <h3 className="px-1 text-xs font-medium text-muted-foreground">{formatDay(date)}</h3>
-                <Card className="gap-0 py-0">
+                <h3
+                  className="flex items-center gap-1.5 px-1 text-xs font-medium text-muted-foreground data-[today=true]:text-foreground"
+                  data-today={date === today}
+                >
+                  {formatDay(date)}
+                  {date === today ? <TodayBadge /> : null}
+                </h3>
+                <Card className="gap-0 py-0 data-[today=true]:ring-primary/40" data-today={date === today}>
                   {items.map((t, i) => {
                     const cat = t.categoryId ? categoryById.get(t.categoryId) : undefined;
                     const subtitle =
@@ -151,10 +175,15 @@ export function TransactionList({
                 </TableRow>
               </TableHeader>
               {[...groups.entries()].map(([date, items]) => (
-                <TableBody key={date} className="border-t first-of-type:border-t-0">
+                <TableBody
+                  key={date}
+                  className="border-t first-of-type:border-t-0">
                   <TableRow className="bg-muted/60 hover:bg-muted/60">
-                    <TableCell colSpan={2} className="pl-4 font-medium">
-                      {formatDay(date)}
+                    <TableCell colSpan={2} className={cn("pl-4 font-medium", date === today && TODAY_BAR)}>
+                      <span className="flex items-center gap-2">
+                        {formatDay(date)}
+                        {date === today ? <TodayBadge /> : null}
+                      </span>
                     </TableCell>
                     <TableCell className="pr-4 text-right text-muted-foreground">
                       <Money value={signedSum(items)} currency={currency} />
@@ -175,7 +204,7 @@ export function TransactionList({
                           }
                         }}
                       >
-                        <TableCell className="pl-4">
+                        <TableCell className={cn("pl-4", date === today && TODAY_BAR)}>
                           {t.type === "expense" && cat ? (
                             <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
                           ) : (
@@ -209,4 +238,8 @@ export function TransactionList({
       )}
     </div>
   );
+}
+
+function TodayBadge() {
+  return <Badge className="h-4.5 px-1.5 text-[0.7rem]">Today</Badge>;
 }

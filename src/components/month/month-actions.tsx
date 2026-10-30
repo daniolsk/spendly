@@ -7,7 +7,7 @@ import { useTransactionEditor } from "@/components/transactions/transaction-edit
 export function DesktopAddButtons() {
   const { openNew } = useTransactionEditor();
   return (
-    <div className="hidden gap-2 md:flex">
+    <div className="hidden grid-cols-2 gap-2 md:grid">
       <Button variant="outline" size="lg" onClick={() => openNew("income")}>
         <PlusIcon /> Income
       </Button>
