@@ -6,6 +6,7 @@ import { cn } from "cn";
 import { Trash2Icon } from "lucide-react";
 import type { Category, Transaction } from "@/db/schema";
 import { CategoryDot } from "@/components/category-dot";
+import { DatePicker } from "@/components/date-picker";
 import { ResponsiveDialog } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -265,7 +266,7 @@ function TransactionForm({
   const dateField = (
     <Field data-invalid={!!errors.date}>
       <FieldLabel htmlFor="tx-date">Date</FieldLabel>
-      <Input id="tx-date" type="date" value={date} onChange={(e) => changeDate(e.target.value)} className="h-10" required />
+      <DatePicker id="tx-date" value={date} onChange={changeDate} invalid={!!errors.date} />
       <FieldError>{errors.date}</FieldError>
     </Field>
   );
