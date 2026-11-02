@@ -3,18 +3,19 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { CurrencyAddon } from "@/components/money";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { parseMoney, toInputValue } from "@/lib/money";
 import { saveSettings } from "@/server/actions";
 
-export function OpeningBalanceForm({ openingBalance }: { openingBalance: number }) {
-  const [value, setValue] = useState(toInputValue(openingBalance));
+export function OpeningBalanceForm({ openingBalance, currency }: { openingBalance: number; currency: string }) {
+  const [value, setValue] = useState(toInputValue(openingBalance, currency));
   const [pending, startTransition] = useTransition();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const negative = value.trim().startsWith("-");
-    const parsed = value.trim() ? parseMoney(value) : 0;
+    const parsed = value.trim() ? parseMoney(value, currency) : 0;
     if (parsed === null) {
       toast.error("Invalid amount");
       return;
@@ -36,9 +37,7 @@ export function OpeningBalanceForm({ openingBalance }: { openingBalance: number 
           onChange={(e) => setValue(e.target.value)}
           className="tabular"
         />
-        <InputGroupAddon align="inline-end">
-          <InputGroupText>zł</InputGroupText>
-        </InputGroupAddon>
+        <CurrencyAddon currency={currency} />
       </InputGroup>
       <Button type="submit" variant="outline" className="h-10" disabled={pending}>
         Save

@@ -80,6 +80,9 @@ export default function LandingPage({ searchParams }: PageProps<"/">) {
             <PreviewLoop />
           </div>
           <p className="sr-only">Preview of Spendly with sample data: adding an expense, the month view and the year view.</p>
+          <p className="mt-4 text-xs text-pretty text-muted-foreground sm:text-sm md:mt-8">
+            Sample amounts in Polish złoty. Pick your own currency (EUR, USD, GBP and more) when you sign up.
+          </p>
         </div>
 
         <div className="mt-28 flex w-full max-w-6xl flex-col gap-28 sm:mt-36 sm:gap-36">
@@ -130,7 +133,7 @@ function ClosingCta() {
           Start this month with a clear picture.
         </h2>
         <p className="mt-4 max-w-md text-base text-pretty text-muted-foreground sm:text-lg">
-          Free, private, and ready in a minute. Default categories are set up for you.
+          Free, private, and ready in a minute. Pick your currency, and default categories are set up for you.
         </p>
         <div className="mt-8 flex w-full max-w-xs flex-col items-center gap-3">
           <Suspense fallback={<Skeleton className="h-12 w-full rounded-xl" />}>

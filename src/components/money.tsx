@@ -1,5 +1,6 @@
 import { cn } from "cn";
-import { formatMoney } from "@/lib/money";
+import { InputGroupAddon, InputGroupText } from "@/components/ui/input-group";
+import { currencySymbol, formatMoney } from "@/lib/money";
 
 /** Signed amount: income and refunds (negative expenses) show "+" in the income color, expenses show "−". */
 export function Money({
@@ -21,5 +22,18 @@ export function Money({
     >
       {formatMoney(signedValue, { currency, signed: type !== undefined })}
     </span>
+  );
+}
+
+/** Currency symbol inside an InputGroup, on the side the currency's locale writes it ("zł" after, "$" before). */
+export function CurrencyAddon({ currency, suffix }: { currency: string; suffix?: string }) {
+  const { symbol, prefix } = currencySymbol(currency);
+  return (
+    <InputGroupAddon align={prefix && !suffix ? "inline-start" : "inline-end"}>
+      <InputGroupText>
+        {symbol}
+        {suffix}
+      </InputGroupText>
+    </InputGroupAddon>
   );
 }

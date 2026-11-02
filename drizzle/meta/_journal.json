@@ -15,6 +15,13 @@
       "when": 1793016540652,
       "tag": "0001_income_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793610979503,
+      "tag": "0002_currency_confirmed",
+      "breakpoints": true
     }
   ]
 }

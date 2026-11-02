@@ -9,12 +9,10 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { formatMoney } from "@/lib/money";
+import { formatCompact, formatMoney } from "@/lib/money";
 import { monthName } from "@/lib/month";
 
 export type YearPoint = { month: number; income: number; expenses: number; cumulative: number };
-
-const compact = new Intl.NumberFormat("pl-PL", { notation: "compact", maximumFractionDigits: 1 });
 
 function moneyTooltip(currency: string) {
   return (
@@ -48,7 +46,7 @@ export function IncomeExpenseChart({ data, currency }: { data: YearPoint[]; curr
           tickLine={false}
           axisLine={false}
           width={56}
-          tickFormatter={(v) => compact.format(v / 100)}
+          tickFormatter={(v) => formatCompact(v, currency)}
         />
         <ChartTooltip cursor content={moneyTooltip(currency)} />
         <ChartLegend content={<ChartLegendContent />} />
@@ -75,7 +73,7 @@ export function CumulativeBalanceChart({ data, currency }: { data: YearPoint[]; 
         </defs>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(m) => monthName(m).slice(0, 3)} />
-        <YAxis tickLine={false} axisLine={false} width={56} tickFormatter={(v) => compact.format(v / 100)} />
+        <YAxis tickLine={false} axisLine={false} width={56} tickFormatter={(v) => formatCompact(v, currency)} />
         <ChartTooltip cursor content={moneyTooltip(currency)} />
         <Area
           dataKey="cumulative"

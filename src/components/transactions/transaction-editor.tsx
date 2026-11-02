@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { CurrencyAddon } from "@/components/money";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -25,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
+import { formatMoney, formatNumber, parseMoney, toInputValue } from "@/lib/money";
 import { evaluate, isExpression } from "@/lib/calc";
 import { currentMonthKey, todayKey } from "@/lib/month";
 import { workingDays } from "@/lib/working-days";
@@ -116,10 +117,6 @@ function parseHours(input: string) {
   return v === null ? null : Math.round(v * 100) / 100;
 }
 
-function formatHours(v: number) {
-  return String(v).replace(".", ",");
-}
-
 /** Full-time hours for the date's month: Polish working days × 8. */
 function defaultHours(date: string) {
   return `${workingDays(date.slice(0, 7))}*8`;
@@ -145,25 +142,24 @@ function TransactionForm({
   const sourcesId = useId();
   const [type, setType] = useState<TxType>(initialType);
   const [incomeKind, setIncomeKind] = useState<IncomeKind>(tx?.rate ? "hourly" : "flat");
-  const [amount, setAmount] = useState(tx && !tx.rate ? toInputValue(Math.abs(tx.amount)) : "");
+  const [amount, setAmount] = useState(tx && !tx.rate ? toInputValue(Math.abs(tx.amount), currency) : "");
   const [refund, setRefund] = useState(tx ? tx.type === "expense" && tx.amount < 0 : false);
   const [date, setDate] = useState(tx?.date ?? defaultDate(month, initialType));
   const [description, setDescription] = useState(tx?.description ?? "");
   const [categoryId, setCategoryId] = useState<string | null>(tx?.categoryId ?? null);
-  const [hours, setHours] = useState(tx?.hours ? formatHours(Number(tx.hours)) : tx ? "" : defaultHours(date));
-  const [rate, setRate] = useState(tx?.rate ? toInputValue(tx.rate) : "");
+  const [hours, setHours] = useState(tx?.hours ? formatNumber(Number(tx.hours), currency) : tx ? "" : defaultHours(date));
+  const [rate, setRate] = useState(tx?.rate ? toInputValue(tx.rate, currency) : "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   const hourly = type === "income" && incomeKind === "hourly";
   const parsedHours = parseHours(hours);
-  const parsedRate = rate.trim() ? parseMoney(rate) : null;
+  const parsedRate = rate.trim() ? parseMoney(rate, currency) : null;
   const hourlyTotal = parsedHours && parsedRate ? Math.round(parsedHours * parsedRate) : null;
   const hoursIsDefault = !tx && hours === defaultHours(date);
 
   // Archived categories stay selectable only for the transaction that already uses them.
   const options = categories.filter((c) => !c.archived || c.id === tx?.categoryId);
-  const unit = currency === "PLN" ? "zł" : currency;
 
   function changeDate(next: string) {
     // Untouched default hours follow the month of the picked date.
@@ -185,7 +181,7 @@ function TransactionForm({
     if (!known) return;
     if (known.rate) {
       setIncomeKind("hourly");
-      setRate(toInputValue(known.rate));
+      setRate(toInputValue(known.rate, currency));
     } else {
       setIncomeKind("flat");
     }
@@ -194,7 +190,7 @@ function TransactionForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: Record<string, string> = {};
-    const parsedAmount = parseMoney(amount);
+    const parsedAmount = parseMoney(amount, currency);
     if (hourly) {
       if (!parsedHours || parsedHours <= 0) next.hours = "Enter hours worked";
       if (!parsedRate) next.rate = "Enter the hourly rate";
@@ -248,16 +244,14 @@ function TransactionForm({
           id="tx-amount"
           inputMode="decimal"
           autoComplete="off"
-          placeholder="0,00"
+          placeholder={toInputValue(0, currency)}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           aria-invalid={!!errors.amount}
           className="tabular text-xl! font-semibold"
           autoFocus={!tx && type === "expense"}
         />
-        <InputGroupAddon align="inline-end">
-          <InputGroupText>{unit}</InputGroupText>
-        </InputGroupAddon>
+        <CurrencyAddon currency={currency} />
       </InputGroup>
       <FieldError>{errors.amount}</FieldError>
     </Field>
@@ -391,7 +385,7 @@ function TransactionForm({
                         value={hours}
                         onChange={(e) => setHours(e.target.value)}
                         onBlur={() => {
-                          if (!hoursIsDefault && isExpression(hours) && parsedHours !== null) setHours(formatHours(parsedHours));
+                          if (!hoursIsDefault && isExpression(hours) && parsedHours !== null) setHours(formatNumber(parsedHours, currency));
                         }}
                         aria-invalid={!!errors.hours}
                         className="tabular text-lg! font-semibold"
@@ -402,7 +396,7 @@ function TransactionForm({
                     </InputGroup>
                     {isExpression(hours) && parsedHours !== null && !errors.hours ? (
                       <FieldDescription className="tabular">
-                        = {formatHours(parsedHours)} h{hoursIsDefault ? ` (${workingDays(date.slice(0, 7))} working days)` : ""}
+                        = {formatNumber(parsedHours, currency)} h{hoursIsDefault ? ` (${workingDays(date.slice(0, 7))} working days)` : ""}
                       </FieldDescription>
                     ) : null}
                     <FieldError>{errors.hours}</FieldError>
@@ -413,15 +407,13 @@ function TransactionForm({
                       <InputGroupInput
                         id="tx-rate"
                         inputMode="decimal"
-                        placeholder="0,00"
+                        placeholder={toInputValue(0, currency)}
                         value={rate}
                         onChange={(e) => setRate(e.target.value)}
                         aria-invalid={!!errors.rate}
                         className="tabular text-lg! font-semibold"
                       />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupText>{unit}/h</InputGroupText>
-                      </InputGroupAddon>
+                      <CurrencyAddon currency={currency} suffix="/h" />
                     </InputGroup>
                     <FieldError>{errors.rate}</FieldError>
                   </Field>

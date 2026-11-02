@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { CategoryLabel } from "@/components/category-dot";
 import { ResponsiveDialog } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { CurrencyAddon } from "@/components/money";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
 import { monthLabel } from "@/lib/month";
 import { resetMonthPlan, saveMonthPlan } from "@/server/actions";
@@ -29,11 +30,11 @@ export function PlanEditor({
   const [pending, startTransition] = useTransition();
 
   function openEditor() {
-    setValues(Object.fromEntries(rows.map((r) => [r.id, toInputValue(r.planned)])));
+    setValues(Object.fromEntries(rows.map((r) => [r.id, toInputValue(r.planned, currency)])));
     setOpen(true);
   }
 
-  const parsed = rows.map((r) => ({ categoryId: r.id, amount: values[r.id]?.trim() ? parseMoney(values[r.id]) : 0 }));
+  const parsed = rows.map((r) => ({ categoryId: r.id, amount: values[r.id]?.trim() ? parseMoney(values[r.id], currency) : 0 }));
   const invalid = parsed.some((p) => p.amount === null);
   const total = parsed.reduce((a, p) => a + (p.amount ?? 0), 0);
 
@@ -79,12 +80,10 @@ export function PlanEditor({
                   inputMode="decimal"
                   className="tabular text-right"
                   value={values[r.id] ?? ""}
-                  aria-invalid={values[r.id]?.trim() ? parseMoney(values[r.id]) === null : false}
+                  aria-invalid={values[r.id]?.trim() ? parseMoney(values[r.id], currency) === null : false}
                   onChange={(e) => setValues((v) => ({ ...v, [r.id]: e.target.value }))}
                 />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>zł</InputGroupText>
-                </InputGroupAddon>
+                <CurrencyAddon currency={currency} />
               </InputGroup>
             </label>
           ))}

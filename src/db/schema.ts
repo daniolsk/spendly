@@ -85,6 +85,8 @@ export const userSettings = pgTable("user_settings", {
     .primaryKey()
     .references(() => user.id, { onDelete: "cascade" }),
   currency: text().notNull().default("PLN"),
+  /** When the user picked their currency; null means they still get the first-run picker. */
+  currencyConfirmedAt: timestamp(),
   /** Balance carried over from before the first tracked month, in minor units. */
   openingBalance: integer().notNull().default(0),
   updatedAt: timestamp().notNull().defaultNow(),
@@ -123,7 +125,7 @@ export const transaction = pgTable(
     /** Required for expenses, optional for income. */
     categoryId: uuid().references(() => category.id, { onDelete: "restrict" }),
     /**
-     * Minor units (grosze). Income is always positive. Expenses are positive,
+     * Minor units (e.g. grosze, cents). Income is always positive. Expenses are positive,
      * or negative for a refund / money back, which reduces the category's spend.
      */
     amount: integer().notNull(),

@@ -9,7 +9,7 @@ import { daysInMonth, monthRange } from "@/lib/month";
 
 export async function getSettings(userId: string) {
   const row = await db.query.userSettings.findFirst({ where: eq(userSettings.userId, userId) });
-  return row ?? { userId, currency: "PLN", openingBalance: 0, updatedAt: new Date() };
+  return row ?? { userId, currency: "PLN", currencyConfirmedAt: null, openingBalance: 0, updatedAt: new Date() };
 }
 
 export async function getCategories(userId: string, { includeArchived = false } = {}) {
