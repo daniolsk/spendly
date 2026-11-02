@@ -43,9 +43,9 @@ export default function LandingPage({ searchParams }: PageProps<"/">) {
         </span>
 
         <h1 className="mt-6 max-w-4xl text-5xl leading-[0.95] font-semibold tracking-tighter text-balance sm:text-7xl lg:text-8xl">
-          Every złoty.
+          Know where it went.
           <span className="block bg-linear-135 from-[#1baf7a] to-[#0f7a55] bg-clip-text pb-2 text-transparent dark:from-[#3ddc9c] dark:to-[#1baf7a]">
-            One clear month.
+            Plan where it goes.
           </span>
         </h1>
 
