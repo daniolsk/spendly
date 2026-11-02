@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 /** Public privacy policy, linked from the landing page and the Google OAuth consent screen. */
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" lastUpdated="27 October 2026">
+    <LegalPage title="Privacy Policy" lastUpdated="2 November 2026">
       <p>
         Spendly (<span className="whitespace-nowrap">spendly.danielskowron.com</span>) is a personal expense tracker operated
         by Daniel Skowron. This policy explains what data Spendly collects, how it is used and stored, and the choices you
@@ -93,8 +93,9 @@ export default function PrivacyPage() {
       <Section title="Retention and deletion">
         <p>
           Your data is kept for as long as you use Spendly. You can delete individual transactions and unused categories in
-          the app at any time. To delete your account and all of its data, or to get a copy of your data, contact us using
-          the details below; requests are handled within 30 days. You can also revoke Spendly&apos;s access to your Google
+          the app at any time. You can delete your account in Settings, which immediately and permanently removes it and all
+          of its data (transactions, categories, plans and settings, along with your Google profile details and sign-in
+          tokens). To get a copy of your data, contact us using the details below; requests are handled within 30 days. You can also revoke Spendly&apos;s access to your Google
           account at any time at{" "}
           <ExternalLink href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</ExternalLink>.
         </p>

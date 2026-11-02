@@ -4,6 +4,7 @@ import { BuildInfo } from "@/components/build-info";
 import { PageHeader } from "@/components/page-header";
 import { AccountCard } from "@/components/settings/account-card";
 import { CategoryManager } from "@/components/settings/category-manager";
+import { DeleteAccount } from "@/components/settings/delete-account";
 import { CurrencyForm } from "@/components/settings/currency-form";
 import { OpeningBalanceForm } from "@/components/settings/opening-balance-form";
 import { UsageLimits } from "@/components/settings/usage-limits";
@@ -81,6 +82,17 @@ async function SettingsContent() {
           </CardHeader>
           <CardContent>
             <UsageLimits usage={usage} month={month} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Delete account</CardTitle>
+            <CardDescription>
+              Permanently deletes your account and all of its data. Signing in again later starts a fresh, empty account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DeleteAccount email={user.email} />
           </CardContent>
         </Card>
       </div>

@@ -77,6 +77,7 @@ src/
 - "Cost of living" excludes categories with `excludeFromLiving`.
 - "Balance since start" = `user_settings.openingBalance` + all income − all expenses up to the end of that month.
 - Archived categories are hidden from pickers but keep their history.
+- Users can delete their account in Settings (`deleteAccount` in `server/actions.ts`): it deletes every per-user row in one `db.batch` and clears the auth cookies, so the next sign-in is a brand-new user. **Any new per-user table must be added to that batch.**
 - Per-user caps in `lib/limits.ts` (transactions per month / per 24 h / total, categories, plan months) are checked in the server actions before inserts and shown in Settings. They exist only to stop abuse — keep them far above real use; any new kind of user-created data needs a cap too.
 
 ## Code conventions

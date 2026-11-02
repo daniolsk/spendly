@@ -3,10 +3,12 @@
 import "server-only";
 import { and, asc, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
+import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { category, monthPlan, transaction, userSettings } from "@/db/schema";
+import { category, monthPlan, transaction, user as userTable, userSettings } from "@/db/schema";
+import { auth } from "@/lib/auth";
 import { CATEGORY_COLOR_KEYS } from "@/lib/colors";
 import { CURRENCY_CODES } from "@/lib/currency";
 import { LIMITS } from "@/lib/limits";
@@ -344,6 +346,46 @@ export async function saveCurrency(input: z.input<typeof currencyInput>): Promis
       .values({ userId: user.id, currency, currencyConfirmedAt: now })
       .onConflictDoUpdate({ target: userSettings.userId, set: { currency, currencyConfirmedAt: now, updatedAt: now } });
     refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Account
+// ---------------------------------------------------------------------------
+
+/**
+ * Permanently deletes the signed-in user and every row that belongs to them, then
+ * clears the auth cookies. Signing in again with the same Google account starts a
+ * brand-new user (default categories, first-run currency picker).
+ * `confirmEmail` must match the account's email, so a stray click can't trigger it.
+ * Any new per-user table must be deleted here too.
+ */
+export async function deleteAccount(confirmEmail: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    if (z.string().trim().toLowerCase().parse(confirmEmail) !== user.email.toLowerCase()) {
+      return { ok: false, error: "The email doesn’t match your account." };
+    }
+    // Children first: transaction.categoryId is ON DELETE RESTRICT, so categories can only
+    // go once their transactions are gone. Deleting the user cascades to session + account.
+    // neon-http runs a batch as one transaction, so it's all or nothing.
+    await db.batch([
+      db.delete(transaction).where(eq(transaction.userId, user.id)),
+      db.delete(monthPlan).where(eq(monthPlan.userId, user.id)),
+      db.delete(category).where(eq(category.userId, user.id)),
+      db.delete(userSettings).where(eq(userSettings.userId, user.id)),
+      db.delete(userTable).where(eq(userTable.id, user.id)),
+    ]);
+    // The session row is gone, but the cached session cookie would keep the user
+    // "signed in" for a few minutes, so drop every auth cookie now.
+    const { authCookies } = await auth.$context;
+    const store = await cookies();
+    for (const { name, attributes } of Object.values(authCookies)) {
+      store.set(name, "", { path: attributes.path, secure: attributes.secure, domain: attributes.domain, maxAge: 0 });
+    }
     return { ok: true };
   } catch (e) {
     return fail(e);
