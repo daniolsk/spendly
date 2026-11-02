@@ -49,6 +49,10 @@ export default function PrivacyPage() {
             sign out.
           </li>
           <li>
+            <strong className="font-medium">Home-screen app flag</strong>: set only when Spendly runs as an app added to an
+            iPhone or iPad home screen, so it opens straight on your dashboard.
+          </li>
+          <li>
             <strong className="font-medium">Theme preference</strong>: your light or dark mode choice, kept in your
             browser&apos;s local storage.
           </li>

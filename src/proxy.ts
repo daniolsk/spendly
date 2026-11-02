@@ -1,5 +1,6 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
+import { STANDALONE_COOKIE } from "@/lib/standalone";
 import { currentMonthKey, zonedToday } from "@/lib/month";
 
 const PUBLIC_PATHS = new Set(["/", "/privacy", "/terms"]);
@@ -12,6 +13,18 @@ export function proxy(request: NextRequest) {
   // Sign-in starts from the landing page; old /login links keep working.
   if (pathname === "/login") {
     return NextResponse.redirect(new URL(`/${request.nextUrl.search}`, request.url));
+  }
+  // The iOS home-screen app opens on whatever URL it was added from (often "/"): send it
+  // straight to the dashboard. Only full page loads, so the inactivity lock's client-side
+  // navigation back to "/" still shows the landing page.
+  if (
+    pathname === "/" &&
+    request.cookies.has(STANDALONE_COOKIE) &&
+    getSessionCookie(request) &&
+    request.headers.get("sec-fetch-dest") === "document" &&
+    !request.headers.has("rsc")
+  ) {
+    return NextResponse.redirect(new URL("/m", request.url));
   }
   // The landing page and legal pages are public; everything else needs a session.
   if (!PUBLIC_PATHS.has(pathname) && !getSessionCookie(request)) {
