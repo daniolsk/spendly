@@ -1,0 +1,61 @@
+"use client";
+
+import { CheckIcon, DownloadIcon, PlusSquareIcon, ShareIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { promptInstall, useInstallState } from "@/lib/install-prompt";
+
+export function InstallApp() {
+  const state = useInstallState();
+
+  if (state === "unknown") return <Skeleton className="h-9 w-48" />;
+
+  if (state === "standalone" || state === "installed") {
+    return (
+      <p className="flex items-center gap-2 text-sm">
+        <CheckIcon className="size-4 shrink-0 text-income" />
+        {state === "standalone" ? "You’re using the installed app." : "Spendly is installed. Open it from your home screen."}
+      </p>
+    );
+  }
+
+  if (state === "prompt") {
+    return (
+      <Button variant="outline" className="self-start" onClick={() => void promptInstall()}>
+        <DownloadIcon /> Add to home screen
+      </Button>
+    );
+  }
+
+  if (state === "ios") {
+    return (
+      <ol className="flex flex-col gap-2 text-sm">
+        <li className="flex flex-wrap items-center gap-1.5">
+          <Step n={1} /> Tap
+          <ShareIcon className="size-4 text-primary" aria-label="Share" />
+          <span className="font-medium">Share</span> in Safari’s toolbar
+        </li>
+        <li className="flex flex-wrap items-center gap-1.5">
+          <Step n={2} /> Choose
+          <PlusSquareIcon className="size-4" aria-hidden />
+          <span className="font-medium">Add to Home Screen</span>
+        </li>
+      </ol>
+    );
+  }
+
+  return (
+    <p className="text-sm text-muted-foreground">
+      Open your browser’s menu and choose <span className="font-medium text-foreground">Add to Home screen</span> or{" "}
+      <span className="font-medium text-foreground">Install app</span>.
+    </p>
+  );
+}
+
+function Step({ n }: { n: number }) {
+  return (
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+      {n}
+    </span>
+  );
+}

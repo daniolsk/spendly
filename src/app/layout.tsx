@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { InstallPromptListener } from "@/components/install-prompt-listener";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <TooltipProvider>
             {children}
             <Toaster position="top-center" richColors />
+            <InstallPromptListener />
           </TooltipProvider>
         </ThemeProvider>
       </body>
