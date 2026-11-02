@@ -9,6 +9,7 @@ import { PreviewLoop } from "@/components/landing/preview-loop";
 import { FeatureSection, MobileSection, TrustSection } from "@/components/landing/sections";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { zonedToday } from "@/lib/month";
 import { getSession } from "@/server/dal";
 import { DashboardLink, OpenDashboardButton } from "./open-dashboard-button";
@@ -31,9 +32,12 @@ export default function LandingPage({ searchParams }: PageProps<"/">) {
           </span>
           Spendly
         </Link>
-        <Suspense fallback={<Skeleton className="h-9 w-28 rounded-lg" />}>
-          <HeaderAction />
-        </Suspense>
+        <div className="flex items-center gap-2">
+          <ThemeToggle className="rounded-lg bg-background/70 backdrop-blur" />
+          <Suspense fallback={<Skeleton className="h-9 w-28 rounded-lg" />}>
+            <HeaderAction />
+          </Suspense>
+        </div>
       </header>
 
       <main className="relative flex flex-1 flex-col items-center px-4 pt-12 pb-16 text-center sm:px-6 sm:pt-20">
