@@ -4,6 +4,7 @@ import { BuildInfo } from "@/components/build-info";
 import { PageHeader } from "@/components/page-header";
 import { AccountCard } from "@/components/settings/account-card";
 import { CategoryManager } from "@/components/settings/category-manager";
+import { InstallApp } from "@/components/settings/install-app";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { CurrencyForm } from "@/components/settings/currency-form";
 import { OpeningBalanceForm } from "@/components/settings/opening-balance-form";
@@ -73,6 +74,15 @@ async function SettingsContent() {
           </CardHeader>
           <CardContent>
             <AccountCard user={{ name: user.name, email: user.email, image: user.image }} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Home screen app</CardTitle>
+            <CardDescription>Add Spendly to your home screen to open it like an app, straight on the current month.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col">
+            <InstallApp />
           </CardContent>
         </Card>
         <Card>
