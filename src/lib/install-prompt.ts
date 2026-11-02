@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { STANDALONE_COOKIE } from "@/lib/standalone";
 
 // Chrome/Edge/Samsung Internet fire `beforeinstallprompt` once per page load when the
 // app can be installed; keep it so a button can show the install dialog later.
@@ -21,6 +22,10 @@ const emit = () => listeners.forEach((l) => l());
 export function listenForInstallPrompt() {
   if (listening) return;
   listening = true;
+  // Android shares cookies with Chrome (and uses the manifest start_url anyway), so iOS only.
+  if ((navigator as Navigator & { standalone?: boolean }).standalone === true) {
+    document.cookie = `${STANDALONE_COOKIE}=1; path=/; max-age=31536000; samesite=lax; secure`;
+  }
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferred = e as InstallPromptEvent;
