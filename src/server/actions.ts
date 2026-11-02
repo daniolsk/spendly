@@ -8,6 +8,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { category, monthPlan, transaction, userSettings } from "@/db/schema";
 import { CATEGORY_COLOR_KEYS } from "@/lib/colors";
+import { CURRENCY_CODES } from "@/lib/currency";
 import { LIMITS } from "@/lib/limits";
 import { monthRange } from "@/lib/month";
 import { requireUser } from "./dal";
@@ -323,6 +324,25 @@ export async function saveSettings(input: z.input<typeof settingsInput>): Promis
       .insert(userSettings)
       .values({ userId: user.id, ...data })
       .onConflictDoUpdate({ target: userSettings.userId, set: { ...data, updatedAt: new Date() } });
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const currencyInput = z.enum(CURRENCY_CODES);
+
+/** Sets the account currency. It only changes how amounts are labelled; stored amounts are not converted. */
+export async function saveCurrency(input: z.input<typeof currencyInput>): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const currency = currencyInput.parse(input);
+    const now = new Date();
+    await db
+      .insert(userSettings)
+      .values({ userId: user.id, currency, currencyConfirmedAt: now })
+      .onConflictDoUpdate({ target: userSettings.userId, set: { currency, currencyConfirmedAt: now, updatedAt: now } });
     refresh();
     return { ok: true };
   } catch (e) {

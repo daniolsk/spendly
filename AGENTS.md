@@ -46,7 +46,8 @@ src/
     (app)/layout.tsx     authenticated shell (nav, user menu, inactivity lock)
     (app)/m/[month]      month view (YYYY-MM): transactions, income, stats, plan
     (app)/y/[year]       year statistics / charts
-    (app)/settings       categories, opening balance, account
+    (app)/settings       categories, currency, opening balance, account
+    welcome/             first-run currency picker; (app)/layout.tsx redirects here until user_settings.currencyConfirmedAt is set
     api/auth/[...all]    Better Auth handler
   db/schema.ts           Drizzle schema: Better Auth tables + user_settings, category, transaction, month_plan
   db/index.ts            db client (DATABASE_URL_POOLED ?? DATABASE_URL)
@@ -57,7 +58,8 @@ src/
     seed.ts              default categories for a newly created user
   lib/
     auth.ts              Better Auth config (Google only, open sign-up; new users are seeded with default categories)
-    money.ts             format/parse integer grosze
+    money.ts             format/parse integer minor units in the account currency
+    currency.ts          supported currencies (2-decimal only) + the locale each is formatted in
     month.ts             YYYY-MM / YYYY-MM-DD helpers, zonedToday() (APP_TIMEZONE, default Europe/Warsaw)
     app-lock.ts          client-side inactivity lock (privacy only, not security)
     colors.ts            category color keys
@@ -66,7 +68,8 @@ src/
 
 ## Domain rules
 
-- Money is **integer minor units (grosze)**; never do money math with floats. Format with `formatMoney`, parse with `parseMoney`.
+- Money is **integer minor units (grosze, cents…)**; never do money math with floats. Format with `formatMoney`, parse with `parseMoney`, prefill inputs with `toInputValue`, and pass the account currency (`user_settings.currency`) to each; input symbols come from `CurrencyAddon`. Never hardcode "zł".
+- Each account has one currency, picked on first run and changeable in Settings. Changing it only relabels amounts; nothing is converted. Only currencies with exactly 2 decimals are offered.
 - `transaction.type` is `expense` | `income`. Income amount > 0. Expense amount > 0, or **< 0 for a refund** (reduces that category's spend).
 - Expenses require a category; income doesn't (its description is the income source).
 - Hourly income: `rate` (grosze/hour) + `hours` (numeric 7,2), `amount = round(hours × rate)`. Flat income has `rate = null`.

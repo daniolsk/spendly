@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { WalletIcon } from "lucide-react";
 import { BuildInfo } from "@/components/build-info";
@@ -7,10 +8,19 @@ import { MobileTabBar, SidebarNav } from "@/components/shell/nav";
 import { UserMenu } from "@/components/shell/user-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/server/dal";
+import { getSettings } from "@/server/queries";
 
 async function SidebarUser() {
   const user = await requireUser();
   return <UserMenu user={{ name: user.name, email: user.email, image: user.image }} />;
+}
+
+/** New accounts pick their currency first (src/app/welcome). */
+async function CurrencyGate() {
+  const user = await requireUser();
+  const settings = await getSettings(user.id);
+  if (!settings.currencyConfirmedAt) redirect("/welcome");
+  return null;
 }
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
@@ -39,6 +49,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       </main>
       <MobileTabBar />
       <InactivityLock />
+      <Suspense fallback={null}>
+        <CurrencyGate />
+      </Suspense>
     </div>
   );
 }

@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { CurrencyAddon } from "@/components/money";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
 import { CATEGORY_COLOR_KEYS, CATEGORY_COLORS, colorVar } from "@/lib/colors";
 import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
@@ -139,6 +140,7 @@ export function CategoryManager({ categories, currency }: { categories: Category
           <CategoryForm
             key={formKey}
             category={editing === "new" ? undefined : editing}
+            currency={currency}
             onDone={() => setEditing(null)}
           />
         ) : null}
@@ -147,17 +149,17 @@ export function CategoryManager({ categories, currency }: { categories: Category
   );
 }
 
-function CategoryForm({ category, onDone }: { category?: Category; onDone: () => void }) {
+function CategoryForm({ category, currency, onDone }: { category?: Category; currency: string; onDone: () => void }) {
   const [name, setName] = useState(category?.name ?? "");
   const [color, setColor] = useState(category?.color ?? "blue");
-  const [plan, setPlan] = useState(category ? toInputValue(category.defaultPlan) : "");
+  const [plan, setPlan] = useState(category ? toInputValue(category.defaultPlan, currency) : "");
   const [excludeFromLiving, setExclude] = useState(category?.excludeFromLiving ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const defaultPlan = plan.trim() ? parseMoney(plan) : 0;
+    const defaultPlan = plan.trim() ? parseMoney(plan, currency) : 0;
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = "Name is required";
     if (defaultPlan === null) next.plan = "Invalid amount";
@@ -209,14 +211,12 @@ function CategoryForm({ category, onDone }: { category?: Category; onDone: () =>
             <InputGroupInput
               id="cat-plan"
               inputMode="decimal"
-              placeholder="0,00"
+              placeholder={toInputValue(0, currency)}
               value={plan}
               onChange={(e) => setPlan(e.target.value)}
               className="tabular"
             />
-            <InputGroupAddon align="inline-end">
-              <InputGroupText>zł</InputGroupText>
-            </InputGroupAddon>
+            <CurrencyAddon currency={currency} />
           </InputGroup>
           <FieldDescription>Default for every month. You can override it per month in Statistics.</FieldDescription>
           <FieldError>{errors.plan}</FieldError>

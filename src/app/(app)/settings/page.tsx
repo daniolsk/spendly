@@ -4,6 +4,7 @@ import { BuildInfo } from "@/components/build-info";
 import { PageHeader } from "@/components/page-header";
 import { AccountCard } from "@/components/settings/account-card";
 import { CategoryManager } from "@/components/settings/category-manager";
+import { CurrencyForm } from "@/components/settings/currency-form";
 import { OpeningBalanceForm } from "@/components/settings/opening-balance-form";
 import { UsageLimits } from "@/components/settings/usage-limits";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,11 +50,20 @@ async function SettingsContent() {
       <div className="flex flex-col gap-4">
         <Card>
           <CardHeader>
+            <CardTitle>Currency</CardTitle>
+            <CardDescription>Every amount in your account is shown in it. Changing it relabels amounts; it doesn’t convert them.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CurrencyForm currency={settings.currency} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Opening balance</CardTitle>
             <CardDescription>Money you had before the first tracked month. Used for “Balance since start”.</CardDescription>
           </CardHeader>
           <CardContent>
-            <OpeningBalanceForm openingBalance={settings.openingBalance} />
+            <OpeningBalanceForm openingBalance={settings.openingBalance} currency={settings.currency} />
           </CardContent>
         </Card>
         <Card>

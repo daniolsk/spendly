@@ -51,7 +51,7 @@ export function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; cu
                   <TableCell>
                     <div className="flex flex-col items-end gap-1">
                       <span className={cn("tabular text-xs", over ? "font-medium text-destructive" : "text-muted-foreground")}>
-                        {r.planned ? formatPercent(ratio) : r.spent ? "unplanned" : "—"}
+                        {r.planned ? formatPercent(ratio, currency) : r.spent ? "unplanned" : "—"}
                         {over && r.planned ? " ▲" : ""}
                       </span>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
@@ -65,7 +65,7 @@ export function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; cu
                 </>
               ) : (
                 <TableCell className="tabular text-right text-muted-foreground">
-                  {totalSpent ? formatPercent(r.spent / totalSpent) : "—"}
+                  {totalSpent ? formatPercent(r.spent / totalSpent, currency) : "—"}
                 </TableCell>
               )}
             </TableRow>
@@ -80,7 +80,7 @@ export function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; cu
             <>
               <TableCell className="tabular hidden text-right sm:table-cell">{formatMoney(totalPlanned, { currency })}</TableCell>
               <TableCell className="tabular text-right text-xs">
-                {totalPlanned ? formatPercent(totalSpent / totalPlanned) : "—"}
+                {totalPlanned ? formatPercent(totalSpent / totalPlanned, currency) : "—"}
               </TableCell>
             </>
           ) : (
