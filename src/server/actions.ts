@@ -1,7 +1,8 @@
 "use server";
 
 import "server-only";
-import { and, asc, eq, gte, lte, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { refresh } from "next/cache";
 import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
@@ -345,6 +346,100 @@ export async function saveCurrency(input: z.input<typeof currencyInput>): Promis
       .insert(userSettings)
       .values({ userId: user.id, currency, currencyConfirmedAt: now })
       .onConflictDoUpdate({ target: userSettings.userId, set: { currency, currencyConfirmedAt: now, updatedAt: now } });
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const onboardingInput = z.object({
+  currency: currencyInput,
+  /** Existing categories to keep, in display order; the user's other active categories are removed. */
+  keep: z.array(z.object({ id: z.uuid(), defaultPlan: plannedAmount })).max(LIMITS.categories),
+  /** New categories created during setup. */
+  add: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1, "Name is required").max(50),
+        color: z.enum(CATEGORY_COLOR_KEYS as [string, ...string[]]),
+        defaultPlan: plannedAmount,
+      }),
+    )
+    .max(30),
+  /** null when the step was skipped (keeps the current value). */
+  openingBalance: z.number().int().min(-MAX_AMOUNT).max(MAX_AMOUNT).nullable(),
+});
+
+/**
+ * First-run setup (src/app/welcome): currency plus the optional categories, monthly plans and
+ * opening balance, applied in one batch. Only allowed until the currency is confirmed, so it
+ * can't be used later to wipe categories.
+ */
+export async function completeOnboarding(input: z.input<typeof onboardingInput>): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const { currency, keep, add, openingBalance } = onboardingInput.parse(input);
+    if (keep.length + add.length === 0) return { ok: false, error: "Keep at least one category." };
+
+    const settings = await db.query.userSettings.findFirst({
+      where: eq(userSettings.userId, user.id),
+      columns: { currencyConfirmedAt: true },
+    });
+    if (settings?.currencyConfirmedAt) return { ok: false, error: "Setup is already done. Use Settings instead." };
+
+    const owned = await db
+      .select({ id: category.id, archived: category.archived })
+      .from(category)
+      .where(eq(category.userId, user.id));
+    const ownedIds = new Set(owned.map((c) => c.id));
+    if (keep.some((k) => !ownedIds.has(k.id))) return { ok: false, error: "Unknown category" };
+    if (owned.length + add.length > LIMITS.categories)
+      return { ok: false, error: `You can have at most ${n(LIMITS.categories)} categories.` };
+
+    // Removed categories are deleted, or archived if they already have transactions (see deleteCategory).
+    const keepIds = new Set(keep.map((k) => k.id));
+    const removeIds = owned.filter((c) => !c.archived && !keepIds.has(c.id)).map((c) => c.id);
+    const usedIds = removeIds.length
+      ? new Set(
+          (
+            await db
+              .selectDistinct({ id: transaction.categoryId })
+              .from(transaction)
+              .where(and(eq(transaction.userId, user.id), inArray(transaction.categoryId, removeIds)))
+          ).map((r) => r.id),
+        )
+      : new Set<string | null>();
+    const archiveIds = removeIds.filter((id) => usedIds.has(id));
+    const deleteIds = removeIds.filter((id) => !usedIds.has(id));
+
+    const now = new Date();
+    const settingsValues = { currency, currencyConfirmedAt: now, ...(openingBalance !== null && { openingBalance }) };
+    const writes: BatchItem<"pg">[] = keep.map(({ id, defaultPlan }, i) =>
+      db
+        .update(category)
+        .set({ defaultPlan, sortOrder: i })
+        .where(and(eq(category.id, id), eq(category.userId, user.id))),
+    );
+    if (archiveIds.length)
+      writes.push(
+        db
+          .update(category)
+          .set({ archived: true })
+          .where(and(eq(category.userId, user.id), inArray(category.id, archiveIds))),
+      );
+    if (deleteIds.length)
+      writes.push(db.delete(category).where(and(eq(category.userId, user.id), inArray(category.id, deleteIds))));
+    if (add.length)
+      writes.push(db.insert(category).values(add.map((c, i) => ({ ...c, userId: user.id, sortOrder: keep.length + i }))));
+    // Confirming the currency ends the first-run setup; it's in the same batch, so it's all or nothing.
+    writes.push(
+      db
+        .insert(userSettings)
+        .values({ userId: user.id, ...settingsValues })
+        .onConflictDoUpdate({ target: userSettings.userId, set: { ...settingsValues, updatedAt: now } }),
+    );
+    await db.batch(writes as [BatchItem<"pg">, ...BatchItem<"pg">[]]);
     refresh();
     return { ok: true };
   } catch (e) {
