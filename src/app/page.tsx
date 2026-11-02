@@ -6,6 +6,7 @@ import { GoogleLogo, GoogleSignInButton } from "@/components/auth/google-sign-in
 import { AppPreview } from "@/components/landing/app-preview";
 import { LegalLinks } from "@/components/legal-page";
 import { PreviewLoop } from "@/components/landing/preview-loop";
+import { FeatureSection, MobileSection, TrustSection } from "@/components/landing/sections";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { zonedToday } from "@/lib/month";
@@ -76,6 +77,13 @@ export default function LandingPage({ searchParams }: PageProps<"/">) {
           </div>
           <p className="sr-only">Preview of Spendly with sample data: adding an expense, the month view and the year view.</p>
         </div>
+
+        <div className="mt-28 flex w-full max-w-6xl flex-col gap-28 sm:mt-36 sm:gap-36">
+          <FeatureSection />
+          <MobileSection />
+          <TrustSection />
+          <ClosingCta />
+        </div>
       </main>
 
       <footer className="relative flex flex-col items-center gap-2 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
@@ -103,11 +111,39 @@ async function HeaderAction() {
   );
 }
 
+function ClosingCta() {
+  return (
+    <section
+      aria-labelledby="cta-title"
+      className="relative overflow-hidden rounded-3xl border bg-background/70 px-5 py-14 shadow-sm backdrop-blur sm:px-10 sm:py-20"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(40rem_18rem_at_50%_0%,rgba(27,175,122,0.18),transparent_70%)]"
+      />
+      <div className="relative flex flex-col items-center">
+        <h2 id="cta-title" className="max-w-2xl text-3xl leading-tight font-semibold tracking-tighter text-balance sm:text-5xl">
+          Start this month with a clear picture.
+        </h2>
+        <p className="mt-4 max-w-md text-base text-pretty text-muted-foreground sm:text-lg">
+          Free, private, and ready in a minute. Default categories are set up for you.
+        </p>
+        <div className="mt-8 flex w-full max-w-xs flex-col items-center gap-3">
+          <Suspense fallback={<Skeleton className="h-12 w-full rounded-xl" />}>
+            <PrimaryAction />
+          </Suspense>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** Signed in: open the dashboard (and clear the inactivity lock). Signed out: Google sign-in. */
-async function PrimaryAction({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+async function PrimaryAction({ searchParams }: Partial<Pick<PageProps<"/">, "searchParams">>) {
   const [session, query] = await Promise.all([getSession(), searchParams]);
   if (!session) {
-    const error = typeof query.error === "string" ? query.error.toLowerCase() : null;
+    // Only the hero passes searchParams, so a sign-in error shows once.
+    const error = typeof query?.error === "string" ? query.error.toLowerCase() : null;
     return (
       <>
         <GoogleSignInButton size="lg" className="h-12 w-full gap-3 rounded-xl text-base shadow-sm">
