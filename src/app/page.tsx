@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { zonedToday } from "@/lib/month";
 import { getSession } from "@/server/dal";
 import { DashboardLink, OpenDashboardButton } from "./open-dashboard-button";
+import { StandaloneRedirect } from "./standalone-redirect";
 
 const HIGHLIGHTS = ["Monthly plans per category", "Refunds & hourly income", "Year at a glance"];
 
@@ -112,9 +113,12 @@ async function HeaderAction() {
     );
   }
   return (
-    <Button asChild variant="outline" size="sm" className={className}>
-      <DashboardLink>Dashboard</DashboardLink>
-    </Button>
+    <>
+      <StandaloneRedirect />
+      <Button asChild variant="outline" size="sm" className={className}>
+        <DashboardLink>Dashboard</DashboardLink>
+      </Button>
+    </>
   );
 }
 

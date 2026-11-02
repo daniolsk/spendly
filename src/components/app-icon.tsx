@@ -1,7 +1,15 @@
 // Shared artwork for the generated favicon / home-screen icons: the logo tile
 // (brand gradient + Lucide "wallet" glyph) used in the header and sidebar.
-export function AppIconArtwork({ size, rounded = false }: { size: number; rounded?: boolean }) {
-  const glyph = size * 0.58;
+export function AppIconArtwork({
+  size,
+  rounded = false,
+  glyphScale = 0.58,
+}: {
+  size: number;
+  rounded?: boolean;
+  glyphScale?: number;
+}) {
+  const glyph = size * glyphScale;
   return (
     <div
       style={{
