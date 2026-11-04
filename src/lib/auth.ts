@@ -31,6 +31,11 @@ export const auth = betterAuth({
       prompt: "select_account",
     },
   },
+  account: {
+    // Google tokens aren't used by the app; keep them unreadable if the DB leaks.
+    // Rows stored before this was enabled are still read as plain text.
+    encryptOAuthTokens: true,
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days
     updateAge: 60 * 60 * 24,

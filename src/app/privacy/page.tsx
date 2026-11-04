@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           <li>your Google account ID.</li>
         </List>
         <p>
-          Spendly uses this only to create your account, sign you in, and show your name and picture in the app. Google also returns sign-in tokens, which are stored with your account record.
+          Spendly uses this only to create your account, sign you in, and show your name and picture in the app. Google also returns sign-in tokens, which are stored with your account record (the access and refresh tokens encrypted).
           Spendly does not use them to access any other Google service, and it does not read your Gmail, contacts, files or
           calendar.
         </p>

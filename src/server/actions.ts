@@ -3,6 +3,7 @@
 import "server-only";
 import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { refresh } from "next/cache";
 import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
@@ -18,7 +19,8 @@ import { requireUser } from "./dal";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-const MAX_AMOUNT = 100_000_000_00; // 100M in minor units
+// Amounts are Postgres `integer` (max 2,147,483,647), so cap below that: 20M in major units.
+const MAX_AMOUNT = 2_000_000_000;
 const plannedAmount = z.number().int().min(0).max(MAX_AMOUNT);
 const monthKey = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const dateKey = z.iso.date();
@@ -26,8 +28,23 @@ const dateKey = z.iso.date();
 function fail(error: unknown): ActionResult {
   unstable_rethrow(error); // let auth redirects through
   if (error instanceof z.ZodError) return { ok: false, error: error.issues[0]?.message ?? "Invalid input" };
-  console.error(error);
+  logError(error);
   return { ok: false, error: "Something went wrong. Please try again." };
+}
+
+/**
+ * Logs a failed action without user data: Drizzle's error message embeds the SQL params
+ * (descriptions, amounts) and Postgres messages can echo values, so database errors
+ * (wrapped single queries, or a raw NeonDbError from db.batch) log only the Postgres code.
+ */
+function logError(error: unknown) {
+  const dbError = error instanceof DrizzleQueryError ? error.cause : error;
+  if (error instanceof DrizzleQueryError || (dbError instanceof Error && dbError.name === "NeonDbError")) {
+    const { code, constraint } = (dbError ?? {}) as { code?: unknown; constraint?: unknown };
+    console.error("Database query failed", { code, constraint });
+  } else {
+    console.error(error);
+  }
 }
 
 async function assertOwnCategory(userId: string, categoryId: string) {
