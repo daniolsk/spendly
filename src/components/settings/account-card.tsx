@@ -1,17 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { useTheme } from "next-themes";
-import { LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { toast } from "sonner";
+import { LaptopMinimalIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { initials, useSignOut, type MenuUser } from "@/components/shell/user-menu";
 import { useMounted } from "@/hooks/use-media-query";
+import { authClient } from "@/lib/auth-client";
 
 export function AccountCard({ user }: { user: MenuUser }) {
   const { theme, setTheme } = useTheme();
   const signOut = useSignOut();
   const mounted = useMounted();
+  const [revoking, setRevoking] = useState(false);
+
+  async function signOutOtherDevices() {
+    setRevoking(true);
+    const { error } = await authClient.revokeOtherSessions();
+    setRevoking(false);
+    // Other devices keep a short-lived session cache, so they drop off within ~5 minutes.
+    if (error) toast.error("Couldn’t sign out other devices. Please try again.");
+    else toast.success("Other devices will be signed out within 5 minutes.");
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -41,6 +54,12 @@ export function AccountCard({ user }: { user: MenuUser }) {
             <MonitorIcon />
           </ToggleGroupItem>
         </ToggleGroup>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-sm font-medium">Other devices</span>
+        <Button variant="outline" onClick={signOutOtherDevices} disabled={revoking}>
+          <LaptopMinimalIcon /> {revoking ? "Signing out…" : "Sign out other devices"}
+        </Button>
       </div>
     </div>
   );
