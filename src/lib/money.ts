@@ -1,6 +1,7 @@
 // All amounts are integers in minor units (e.g. grosze, cents). Never do money math with floats.
 // Every account has one currency (user_settings.currency); it only changes how amounts are shown.
 
+import { evaluate, isExpression } from "./calc";
 import { currencyLocale, DEFAULT_CURRENCY } from "./currency";
 
 const formatters = new Map<string, Intl.NumberFormat>();
@@ -95,6 +96,18 @@ export function parseMoney(input: string, currency: string = DEFAULT_CURRENCY): 
 
   const value = Number(whole) * 100 + Number(frac.padEnd(2, "0"));
   return Number.isSafeInteger(value) ? value : null;
+}
+
+/**
+ * Like parseMoney, but also accepts arithmetic ("150/2", "12,99*3 + 5"); the result is
+ * rounded to minor units. Expressions that come out negative are invalid.
+ */
+export function parseMoneyInput(input: string, currency: string = DEFAULT_CURRENCY): number | null {
+  if (!isExpression(input)) return parseMoney(input, currency);
+  const v = evaluate(input);
+  if (v === null || v < 0) return null;
+  const minor = Math.round(v * 100);
+  return Number.isSafeInteger(minor) ? minor : null;
 }
 
 /** Minor units -> editable string in the currency's number style, e.g. 103550 -> "1035,50" (PLN) or "1035.50" (USD). */
