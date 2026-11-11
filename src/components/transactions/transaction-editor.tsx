@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { formatMoney, formatNumber, parseMoney, toInputValue } from "@/lib/money";
+import { formatMoney, formatNumber, parseMoney, parseMoneyInput, toInputValue } from "@/lib/money";
 import { evaluate, isExpression } from "@/lib/calc";
 import { currentMonthKey, todayKey } from "@/lib/month";
 import { workingDays } from "@/lib/working-days";
@@ -157,6 +157,7 @@ function TransactionForm({
   const parsedRate = rate.trim() ? parseMoney(rate, currency) : null;
   const hourlyTotal = parsedHours && parsedRate ? Math.round(parsedHours * parsedRate) : null;
   const hoursIsDefault = !tx && hours === defaultHours(date);
+  const parsedAmount = parseMoneyInput(amount, currency);
 
   // Archived categories stay selectable only for the transaction that already uses them.
   const options = categories.filter((c) => !c.archived || c.id === tx?.categoryId);
@@ -190,7 +191,6 @@ function TransactionForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: Record<string, string> = {};
-    const parsedAmount = parseMoney(amount, currency);
     if (hourly) {
       if (!parsedHours || parsedHours <= 0) next.hours = "Enter hours worked";
       if (!parsedRate) next.rate = "Enter the hourly rate";
@@ -242,17 +242,23 @@ function TransactionForm({
       <InputGroup className="h-12">
         <InputGroupInput
           id="tx-amount"
-          inputMode="decimal"
+          inputMode="text"
           autoComplete="off"
           placeholder={toInputValue(0, currency)}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
+          onBlur={() => {
+            if (isExpression(amount) && parsedAmount !== null) setAmount(toInputValue(parsedAmount, currency));
+          }}
           aria-invalid={!!errors.amount}
           className="tabular text-xl! font-semibold"
           autoFocus={!tx && type === "expense"}
         />
         <CurrencyAddon currency={currency} />
       </InputGroup>
+      {isExpression(amount) && parsedAmount !== null && !errors.amount ? (
+        <FieldDescription className="tabular">= {formatMoney(parsedAmount, { currency })}</FieldDescription>
+      ) : null}
       <FieldError>{errors.amount}</FieldError>
     </Field>
   );
