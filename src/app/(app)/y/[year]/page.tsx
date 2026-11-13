@@ -60,7 +60,12 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
             <ChevronRightIcon />
           </Link>
         </Button>
-        <SwipeNavigation prev={`/y/${year - 1}`} next={`/y/${year + 1}`} />
+        <SwipeNavigation
+          prev={`/y/${year - 1}`}
+          next={`/y/${year + 1}`}
+          prevLabel={String(year - 1)}
+          nextLabel={String(year + 1)}
+        />
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">

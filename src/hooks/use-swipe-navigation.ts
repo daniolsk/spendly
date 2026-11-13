@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
-const MIN_DISTANCE = 70; // px of horizontal travel
-const MAX_DURATION = 800; // ms; slower drags are scrolling or reading, not a swipe
+export const SWIPE_DISTANCE = 70; // px of horizontal travel that commits a swipe
+const AXIS_LOCK = 10; // px before deciding whether the gesture is a swipe or a scroll
 const EDGE = 24; // px; leave the screen edges to the browser's back/forward gesture
 
 /** Where a swipe must not navigate: dialogs/sheets, form controls, charts and anything that scrolls sideways. */
@@ -22,16 +22,30 @@ function blocksSwipe(target: EventTarget | null) {
   return false;
 }
 
-/** Swipe left → `next`, swipe right → `prev` on touch screens. */
+/**
+ * Swipe left → `next`, swipe right → `prev` on touch screens.
+ * Returns the live horizontal drag (`dx`, 0 when idle), the direction of a navigation in flight, and `pending`.
+ */
 export function useSwipeNavigation(prev: string, next: string) {
   const router = useRouter();
+  const [dx, setDx] = useState(0);
+  const [target, setTarget] = useState<"prev" | "next" | null>(null);
+  const [pending, startTransition] = useTransition();
   const hrefs = useRef({ prev, next });
   useEffect(() => {
     hrefs.current = { prev, next };
   }, [prev, next]);
 
   useEffect(() => {
-    let start: { x: number; y: number; t: number } | null = null;
+    // axis: null while undecided, "x" once it's a swipe, "y" once it's a scroll (ignored until the next touch).
+    let start: { x: number; y: number; axis: "x" | "y" | null } | null = null;
+    let lastDx = 0;
+
+    function reset() {
+      start = null;
+      lastDx = 0;
+      setDx(0);
+    }
 
     function onStart(e: TouchEvent) {
       const touch = e.touches[0];
@@ -42,36 +56,49 @@ export function useSwipeNavigation(prev: string, next: string) {
         blocksSwipe(e.target) ||
         document.querySelector('[role="dialog"]')
       ) {
-        start = null;
+        reset();
         return;
       }
-      start = { x: touch.clientX, y: touch.clientY, t: e.timeStamp };
+      start = { x: touch.clientX, y: touch.clientY, axis: null };
     }
 
-    function onEnd(e: TouchEvent) {
-      if (!start) return;
-      const touch = e.changedTouches[0];
-      const dx = touch.clientX - start.x;
-      const dy = touch.clientY - start.y;
-      const quick = e.timeStamp - start.t < MAX_DURATION;
-      start = null;
-      if (!quick || Math.abs(dx) < MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 2) return;
-      // Don't hijack a text selection.
-      if (window.getSelection()?.toString()) return;
-      router.push(dx < 0 ? hrefs.current.next : hrefs.current.prev);
+    function onMove(e: TouchEvent) {
+      if (!start || start.axis === "y") return;
+      if (e.touches.length !== 1) return reset();
+      const touch = e.touches[0];
+      const moveX = touch.clientX - start.x;
+      const moveY = touch.clientY - start.y;
+      if (!start.axis) {
+        if (Math.max(Math.abs(moveX), Math.abs(moveY)) < AXIS_LOCK) return;
+        start.axis = Math.abs(moveX) > Math.abs(moveY) * 1.5 ? "x" : "y";
+        if (start.axis === "y") return;
+      }
+      // Selecting text with a long press shouldn't turn into a swipe.
+      if (window.getSelection()?.toString()) return reset();
+      lastDx = moveX;
+      setDx(moveX);
     }
 
-    function onCancel() {
-      start = null;
+    function onEnd() {
+      const committed = start?.axis === "x" && Math.abs(lastDx) >= SWIPE_DISTANCE;
+      const dir = lastDx < 0 ? "next" : "prev";
+      reset();
+      if (!committed) return;
+      setTarget(dir);
+      startTransition(() => router.push(hrefs.current[dir]));
     }
 
     document.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchmove", onMove, { passive: true });
     document.addEventListener("touchend", onEnd, { passive: true });
-    document.addEventListener("touchcancel", onCancel, { passive: true });
+    document.addEventListener("touchcancel", reset, { passive: true });
     return () => {
       document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("touchmove", onMove);
       document.removeEventListener("touchend", onEnd);
-      document.removeEventListener("touchcancel", onCancel);
+      document.removeEventListener("touchcancel", reset);
     };
   }, [router]);
+
+  return { dx, target: pending ? target : null, pending };
 }
