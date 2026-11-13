@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon, Loader2Icon } from "lucide-react";
 import { cn } from "cn";
@@ -57,6 +57,7 @@ function SwipeNavigation({
   const sideRef = useRef(side);
   // The destination's name, held after a swipe commits so it doesn't change to the next one while sliding out.
   const [frozenLabel, setFrozenLabel] = useState<string | null>(null);
+  const frozenRef = useRef<string | null>(null);
 
   // Drag frames are written straight to the element, so following the finger never waits on React.
   const paint = useCallback((dx: number, animate: boolean) => {
@@ -82,11 +83,16 @@ function SwipeNavigation({
   const onDrag = useCallback(
     (dx: number) => {
       if (dx !== 0) {
-        setFrozenLabel(null);
         const s = dx > 0 ? "prev" : "next";
-        if (s !== sideRef.current) {
+        if (s !== sideRef.current || frozenRef.current !== null) {
           sideRef.current = s;
-          setSide(s);
+          frozenRef.current = null;
+          // Put the right label on the right side into the DOM before the pill becomes visible;
+          // a normal state update would land a frame or two later and flash the previous label.
+          flushSync(() => {
+            setSide(s);
+            setFrozenLabel(null);
+          });
         }
       }
       paint(dx, dx === 0);
@@ -96,6 +102,9 @@ function SwipeNavigation({
   const { target, pending } = useSwipeNavigation(prev, next, onDrag);
   const mounted = useMounted();
   if (target && frozenLabel === null) setFrozenLabel(target === "next" ? nextLabel : prevLabel);
+  useEffect(() => {
+    frozenRef.current = frozenLabel;
+  }, [frozenLabel]);
 
   // Committed: settle fully in and hold while the page loads; slide out once it has.
   useEffect(() => {
