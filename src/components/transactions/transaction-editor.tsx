@@ -29,6 +29,7 @@ import {
 import { formatMoney, formatNumber, parseMoney, parseMoneyInput, toInputValue } from "@/lib/money";
 import { evaluate, isExpression } from "@/lib/calc";
 import { currentMonthKey, todayKey } from "@/lib/month";
+import { useT } from "@/lib/i18n/client";
 import { workingDays } from "@/lib/working-days";
 import { deleteTransaction, saveTransaction } from "@/server/actions";
 import type { IncomeSource } from "@/server/queries";
@@ -66,6 +67,7 @@ export function TransactionEditorProvider({
   const [state, setState] = useState<EditorState>({ open: false });
   // Bumped on every open so the form remounts with fresh defaults.
   const [formKey, setFormKey] = useState(0);
+  const t = useT();
 
   const value: EditorContextValue = {
     openNew: (type) => {
@@ -87,7 +89,7 @@ export function TransactionEditorProvider({
       <ResponsiveDialog
         open={state.open}
         onOpenChange={(open) => !open && close()}
-        title={editing ? "Edit transaction" : "New transaction"}
+        title={editing ? t("tx.editTitle") : t("tx.newTitle")}
       >
         {state.open ? (
           <TransactionForm
@@ -140,6 +142,7 @@ function TransactionForm({
   onDone: () => void;
 }) {
   const sourcesId = useId();
+  const t = useT();
   const [type, setType] = useState<TxType>(initialType);
   const [incomeKind, setIncomeKind] = useState<IncomeKind>(tx?.rate ? "hourly" : "flat");
   const [amount, setAmount] = useState(tx && !tx.rate ? toInputValue(Math.abs(tx.amount), currency) : "");
@@ -192,14 +195,14 @@ function TransactionForm({
     e.preventDefault();
     const next: Record<string, string> = {};
     if (hourly) {
-      if (!parsedHours || parsedHours <= 0) next.hours = "Enter hours worked";
-      if (!parsedRate) next.rate = "Enter the hourly rate";
+      if (!parsedHours || parsedHours <= 0) next.hours = t("errors.enterHours");
+      if (!parsedRate) next.rate = t("errors.enterRate");
     } else if (!parsedAmount) {
-      next.amount = "Enter an amount greater than 0";
+      next.amount = t("errors.enterAmount");
     }
-    if (type === "expense" && !categoryId) next.categoryId = "Pick a category";
-    if (type === "income" && !description.trim()) next.description = "Enter the income source";
-    if (!date) next.date = "Pick a date";
+    if (type === "expense" && !categoryId) next.categoryId = t("errors.pickCategory");
+    if (type === "income" && !description.trim()) next.description = t("errors.enterSource");
+    if (!date) next.date = t("errors.pickDate");
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -215,7 +218,9 @@ function TransactionForm({
         rate: hourly ? parsedRate : null,
       });
       if (res.ok) {
-        toast.success(tx ? "Transaction updated" : type === "income" ? "Income added" : refund ? "Refund added" : "Expense added");
+        toast.success(
+          t(tx ? "tx.updated" : type === "income" ? "tx.incomeAdded" : refund ? "tx.refundAdded" : "tx.expenseAdded"),
+        );
         onDone();
       } else {
         toast.error(res.error);
@@ -228,7 +233,7 @@ function TransactionForm({
     startTransition(async () => {
       const res = await deleteTransaction(tx.id);
       if (res.ok) {
-        toast.success("Transaction deleted");
+        toast.success(t("tx.deleted"));
         onDone();
       } else {
         toast.error(res.error);
@@ -238,7 +243,7 @@ function TransactionForm({
 
   const amountField = (
     <Field data-invalid={!!errors.amount}>
-      <FieldLabel htmlFor="tx-amount">Amount</FieldLabel>
+      <FieldLabel htmlFor="tx-amount">{t("common.amount")}</FieldLabel>
       <InputGroup className="h-12">
         <InputGroupInput
           id="tx-amount"
@@ -265,7 +270,7 @@ function TransactionForm({
 
   const dateField = (
     <Field data-invalid={!!errors.date}>
-      <FieldLabel htmlFor="tx-date">Date</FieldLabel>
+      <FieldLabel htmlFor="tx-date">{t("tx.date")}</FieldLabel>
       <DatePicker id="tx-date" value={date} onChange={changeDate} invalid={!!errors.date} />
       <FieldError>{errors.date}</FieldError>
     </Field>
@@ -282,10 +287,10 @@ function TransactionForm({
           className="w-full"
         >
           <ToggleGroupItem value="expense" className="flex-1">
-            Expense
+            {t("common.expense")}
           </ToggleGroupItem>
           <ToggleGroupItem value="income" className="flex-1">
-            Income
+            {t("common.incomeItem")}
           </ToggleGroupItem>
         </ToggleGroup>
 
@@ -293,8 +298,8 @@ function TransactionForm({
           <>
             {amountField}
             <Field data-invalid={!!errors.categoryId}>
-              <FieldLabel>Category</FieldLabel>
-              <div role="radiogroup" aria-label="Category" className="grid grid-cols-2 gap-2">
+              <FieldLabel>{t("common.category")}</FieldLabel>
+              <div role="radiogroup" aria-label={t("common.category")} className="grid grid-cols-2 gap-2">
                 {options.map((c) => {
                   const selected = categoryId === c.id;
                   return (
@@ -319,17 +324,17 @@ function TransactionForm({
             </Field>
             <Field orientation="horizontal">
               <FieldContent>
-                <FieldLabel htmlFor="tx-refund">Refund / money back</FieldLabel>
-                <FieldDescription>Reduces this category&apos;s spending instead of counting as income.</FieldDescription>
+                <FieldLabel htmlFor="tx-refund">{t("tx.refundLabel")}</FieldLabel>
+                <FieldDescription>{t("tx.refundHint")}</FieldDescription>
               </FieldContent>
               <Switch id="tx-refund" checked={refund} onCheckedChange={setRefund} />
             </Field>
             {dateField}
             <Field>
-              <FieldLabel htmlFor="tx-desc">Description</FieldLabel>
+              <FieldLabel htmlFor="tx-desc">{t("tx.description")}</FieldLabel>
               <Input
                 id="tx-desc"
-                placeholder="Optional"
+                placeholder={t("common.optional")}
                 value={description}
                 maxLength={200}
                 onChange={(e) => setDescription(e.target.value)}
@@ -340,11 +345,11 @@ function TransactionForm({
         ) : (
           <>
             <Field data-invalid={!!errors.description}>
-              <FieldLabel htmlFor="tx-source">Source</FieldLabel>
+              <FieldLabel htmlFor="tx-source">{t("tx.source")}</FieldLabel>
               <Input
                 id="tx-source"
                 list={sourcesId}
-                placeholder="e.g. Futurum"
+                placeholder={t("tx.sourcePlaceholder")}
                 autoComplete="off"
                 value={description}
                 maxLength={200}
@@ -367,13 +372,13 @@ function TransactionForm({
               value={incomeKind}
               onValueChange={(v) => v && setIncomeKind(v as IncomeKind)}
               className="w-full"
-              aria-label="Income type"
+              aria-label={t("tx.incomeType")}
             >
               <ToggleGroupItem value="flat" className="flex-1">
-                Flat amount
+                {t("tx.flat")}
               </ToggleGroupItem>
               <ToggleGroupItem value="hourly" className="flex-1">
-                Hourly
+                {t("tx.hourly")}
               </ToggleGroupItem>
             </ToggleGroup>
 
@@ -381,7 +386,7 @@ function TransactionForm({
               <div className="flex flex-col gap-2">
                 <div className="grid grid-cols-2 gap-3">
                   <Field data-invalid={!!errors.hours}>
-                    <FieldLabel htmlFor="tx-hours">Hours</FieldLabel>
+                    <FieldLabel htmlFor="tx-hours">{t("tx.hoursLabel")}</FieldLabel>
                     <InputGroup className="h-11">
                       <InputGroupInput
                         id="tx-hours"
@@ -402,13 +407,14 @@ function TransactionForm({
                     </InputGroup>
                     {isExpression(hours) && parsedHours !== null && !errors.hours ? (
                       <FieldDescription className="tabular">
-                        = {formatNumber(parsedHours, currency)} h{hoursIsDefault ? ` (${workingDays(date.slice(0, 7))} working days)` : ""}
+                        = {formatNumber(parsedHours, currency)} h
+                        {hoursIsDefault ? ` (${t("tx.workingDays", { count: workingDays(date.slice(0, 7)) })})` : ""}
                       </FieldDescription>
                     ) : null}
                     <FieldError>{errors.hours}</FieldError>
                   </Field>
                   <Field data-invalid={!!errors.rate}>
-                    <FieldLabel htmlFor="tx-rate">Rate</FieldLabel>
+                    <FieldLabel htmlFor="tx-rate">{t("tx.rate")}</FieldLabel>
                     <InputGroup className="h-11">
                       <InputGroupInput
                         id="tx-rate"
@@ -425,7 +431,7 @@ function TransactionForm({
                   </Field>
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 text-sm">
-                  <span className="text-muted-foreground">Total</span>
+                  <span className="text-muted-foreground">{t("common.total")}</span>
                   <span className="tabular font-semibold text-income">
                     {hourlyTotal ? formatMoney(hourlyTotal, { currency }) : "—"}
                   </span>
@@ -445,25 +451,27 @@ function TransactionForm({
               <AlertDialogTrigger asChild>
                 <Button type="button" variant="destructive" size="lg" className="h-11" disabled={pending}>
                   <Trash2Icon />
-                  <span className="sr-only sm:not-sr-only">Delete</span>
+                  <span className="sr-only sm:not-sr-only">{t("common.delete")}</span>
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this transaction?</AlertDialogTitle>
-                  <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                  <AlertDialogTitle>{t("tx.deleteTitle")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("common.cannotUndo")}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                   <AlertDialogAction variant="destructive" onClick={remove}>
-                    Delete
+                    {t("common.delete")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           ) : null}
           <Button type="submit" size="lg" className="h-11 flex-1" disabled={pending}>
-            {pending ? "Saving…" : tx ? "Save changes" : type === "income" ? "Add income" : refund ? "Add refund" : "Add expense"}
+            {pending
+              ? t("common.saving")
+              : t(tx ? "tx.saveChanges" : type === "income" ? "tx.addIncome" : refund ? "tx.addRefund" : "tx.addExpense")}
           </Button>
         </div>
       </FieldGroup>

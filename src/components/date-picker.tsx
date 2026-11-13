@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { pl as plLocale } from "react-day-picker/locale/pl";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useT } from "@/lib/i18n/client";
 import { todayKey } from "@/lib/month";
 
 function toDate(key: string) {
@@ -13,7 +15,10 @@ function toDate(key: string) {
   return new Date(y, m - 1, d);
 }
 
-const label = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+function formatDate(date: Date, locale: string) {
+  const text = new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(date);
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+}
 
 /** Button + calendar popover for a "YYYY-MM-DD" value. */
 export function DatePicker({
@@ -30,6 +35,7 @@ export function DatePicker({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const selected = value ? toDate(value) : undefined;
 
   return (
@@ -47,7 +53,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="text-muted-foreground" />
-          {selected ? label.format(selected) : "Pick a date"}
+          {selected ? formatDate(selected, t.locale) : t("tx.pickDate")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -57,6 +63,7 @@ export function DatePicker({
           selected={selected}
           defaultMonth={selected}
           weekStartsOn={1}
+          locale={t.lang === "pl" ? plLocale : undefined}
           onSelect={(d) => {
             onChange(todayKey(d));
             setOpen(false);

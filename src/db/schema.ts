@@ -87,6 +87,8 @@ export const userSettings = pgTable("user_settings", {
   currency: text().notNull().default("PLN"),
   /** When the user picked their currency; null means they still get the first-run picker. */
   currencyConfirmedAt: timestamp(),
+  /** UI language ("en" | "pl", see lib/i18n); only changes UI text and date formatting. */
+  language: text().notNull().default("en"),
   /** Balance carried over from before the first tracked month, in minor units. */
   openingBalance: integer().notNull().default(0),
   updatedAt: timestamp().notNull().defaultNow(),

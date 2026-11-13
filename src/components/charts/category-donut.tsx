@@ -3,11 +3,13 @@
 import { Cell, Label, Pie, PieChart } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { colorVar } from "@/lib/colors";
+import { useT } from "@/lib/i18n/client";
 import { formatMoney } from "@/lib/money";
 
 export type DonutSlice = { id: string; name: string; color: string; value: number };
 
 export function CategoryDonut({ data, currency, centerLabel }: { data: DonutSlice[]; currency: string; centerLabel: string }) {
+  const t = useT();
   const slices = data.filter((d) => d.value > 0);
   const total = slices.reduce((a, d) => a + d.value, 0);
   const config = Object.fromEntries(
@@ -17,7 +19,7 @@ export function CategoryDonut({ data, currency, centerLabel }: { data: DonutSlic
   if (total === 0) {
     return (
       <div className="mx-auto flex size-56 items-center justify-center rounded-full border-[18px] border-muted text-sm text-muted-foreground sm:size-64">
-        No expenses
+        {t("stats.noExpenses")}
       </div>
     );
   }

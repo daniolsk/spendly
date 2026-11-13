@@ -14,14 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, formatPercent } from "@/lib/money";
 import { monthName } from "@/lib/month";
 import { requireUser } from "@/server/dal";
+import { getT } from "@/server/i18n";
 import { getYearData } from "@/server/queries";
 
 export async function generateMetadata({ params }: PageProps<"/y/[year]">): Promise<Metadata> {
   const { year } = await params;
-  return { title: `Year ${year}` };
+  const t = await getT();
+  return { title: t("year.title", { year }) };
 }
 
 export default function YearPage(props: PageProps<"/y/[year]">) {
@@ -38,7 +40,7 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
   const year = Number(yearParam);
 
   const user = await requireUser();
-  const data = await getYearData(user.id, year);
+  const [data, t] = await Promise.all([getYearData(user.id, year), getT()]);
   const { totals, months, categories, categoryTotals, settings } = data;
   const currency = settings.currency;
   const money = (v: number) => formatMoney(v, { currency });
@@ -49,13 +51,13 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
     <div className="flex flex-col gap-5">
       <header className="-ml-2 flex items-center gap-1">
         <Button variant="ghost" size="icon-lg" asChild>
-          <Link href={`/y/${year - 1}`} aria-label="Previous year">
+          <Link href={`/y/${year - 1}`} aria-label={t("year.previous")}>
             <ChevronLeftIcon />
           </Link>
         </Button>
         <h1 className="px-1 text-xl font-semibold tracking-tight sm:text-2xl">{year}</h1>
         <Button variant="ghost" size="icon-lg" asChild>
-          <Link href={`/y/${year + 1}`} aria-label="Next year">
+          <Link href={`/y/${year + 1}`} aria-label={t("year.next")}>
             <ChevronRightIcon />
           </Link>
         </Button>
@@ -64,32 +66,32 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatTile
           icon={<ArrowDownLeftIcon className="size-3.5" />}
-          label="Income"
+          label={t("common.income")}
           value={<span className="text-income">{money(totals.income)}</span>}
-          hint={totals.activeMonths ? `avg. ${money(totals.avgMonthlyIncome)} / month` : undefined}
+          hint={totals.activeMonths ? t("year.avgPerMonth", { amount: money(totals.avgMonthlyIncome) }) : undefined}
         />
         <StatTile
           icon={<ArrowUpRightIcon className="size-3.5" />}
-          label="Expenses"
+          label={t("common.expenses")}
           value={money(totals.expenses)}
-          hint={totals.activeMonths ? `avg. ${money(totals.avgMonthlyExpenses)} / month` : undefined}
+          hint={totals.activeMonths ? t("year.avgPerMonth", { amount: money(totals.avgMonthlyExpenses) }) : undefined}
         />
-        <StatTile icon={<ScaleIcon className="size-3.5" />} label="Saved this year" value={<Money value={totals.balance} currency={currency} />} />
+        <StatTile icon={<ScaleIcon className="size-3.5" />} label={t("year.saved")} value={<Money value={totals.balance} currency={currency} />} />
         <StatTile
           icon={<HomeIcon className="size-3.5" />}
-          label="Cost of living"
+          label={t("stats.livingCost")}
           value={money(totals.livingCost)}
-          hint={excludedNames.length ? `Excludes ${excludedNames.join(", ")}` : undefined}
+          hint={excludedNames.length ? t("stats.excludes", { names: excludedNames.join(", ") }) : undefined}
         />
         <StatTile
           icon={<SigmaIcon className="size-3.5" />}
-          label="Savings rate"
-          value={totals.income ? `${Math.round((totals.balance / totals.income) * 100)}%` : "—"}
-          hint="Share of income not spent"
+          label={t("year.savingsRate")}
+          value={totals.income ? formatPercent(Math.round((totals.balance / totals.income) * 100) / 100, currency) : "—"}
+          hint={t("year.savingsRateHint")}
         />
         <StatTile
           icon={<PiggyBankIcon className="size-3.5" />}
-          label="Balance at year end"
+          label={t("year.endBalance")}
           value={<Money value={totals.endBalance} currency={currency} />}
         />
       </div>
@@ -97,8 +99,8 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Income vs. expenses</CardTitle>
-            <CardDescription>Per month</CardDescription>
+            <CardTitle>{t("year.incomeVsExpenses")}</CardTitle>
+            <CardDescription>{t("year.perMonth")}</CardDescription>
           </CardHeader>
           <CardContent>
             <IncomeExpenseChart data={months} currency={currency} />
@@ -106,8 +108,8 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Balance since start</CardTitle>
-            <CardDescription>Running total at the end of each month</CardDescription>
+            <CardTitle>{t("stats.balanceSinceStart")}</CardTitle>
+            <CardDescription>{t("year.runningTotal")}</CardDescription>
           </CardHeader>
           <CardContent>
             <CumulativeBalanceChart data={months} currency={currency} />
@@ -117,28 +119,28 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Expenses by category</CardTitle>
-          <CardDescription>Whole year</CardDescription>
+          <CardTitle>{t("stats.byCategory")}</CardTitle>
+          <CardDescription>{t("year.wholeYear")}</CardDescription>
         </CardHeader>
         <CardContent className="grid items-center gap-6 lg:grid-cols-[minmax(0,16rem)_1fr]">
-          <CategoryDonut data={breakdown.map((b) => ({ ...b, value: b.spent }))} currency={currency} centerLabel={`in ${year}`} />
+          <CategoryDonut data={breakdown.map((b) => ({ ...b, value: b.spent }))} currency={currency} centerLabel={t("year.donutCenter", { year: String(year) })} />
           <CategoryBreakdown rows={breakdown} currency={currency} />
         </CardContent>
       </Card>
 
       <Card className="pb-0">
         <CardHeader>
-          <CardTitle>Months</CardTitle>
-          <CardDescription>Tap a month to open it</CardDescription>
+          <CardTitle>{t("year.months")}</CardTitle>
+          <CardDescription>{t("year.monthsHint")}</CardDescription>
         </CardHeader>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-4">Month</TableHead>
-              <TableHead className="text-right">Income</TableHead>
-              <TableHead className="text-right">Expenses</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-              <TableHead className="pr-4 text-right">Since start</TableHead>
+              <TableHead className="pl-4">{t("nav.month")}</TableHead>
+              <TableHead className="text-right">{t("common.income")}</TableHead>
+              <TableHead className="text-right">{t("common.expenses")}</TableHead>
+              <TableHead className="text-right">{t("common.balance")}</TableHead>
+              <TableHead className="pr-4 text-right">{t("common.sinceStart")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -148,7 +150,7 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
                 <TableRow key={m.key} className={cn(empty && "text-muted-foreground")}>
                   <TableCell className="pl-4 font-medium">
                     <Link href={`/m/${m.key}`} className="hover:underline">
-                      {monthName(m.month, "long")}
+                      {monthName(m.month, "long", t.locale)}
                     </Link>
                   </TableCell>
                   <TableCell className="tabular text-right">{empty ? "—" : money(m.income)}</TableCell>
@@ -163,7 +165,7 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell className="pl-4">Total</TableCell>
+              <TableCell className="pl-4">{t("common.total")}</TableCell>
               <TableCell className="tabular text-right">{money(totals.income)}</TableCell>
               <TableCell className="tabular text-right">{money(totals.expenses)}</TableCell>
               <TableCell className="text-right">
@@ -178,18 +180,18 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
       {categories.length ? (
         <Card className="pb-0">
           <CardHeader>
-            <CardTitle>Categories by month</CardTitle>
+            <CardTitle>{t("year.categoriesByMonth")}</CardTitle>
           </CardHeader>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="sticky left-0 z-10 bg-card pl-4">Category</TableHead>
+                <TableHead className="sticky left-0 z-10 bg-card pl-4">{t("common.category")}</TableHead>
                 {months.map((m) => (
                   <TableHead key={m.key} className="text-right">
-                    {monthName(m.month)}
+                    {monthName(m.month, "short", t.locale)}
                   </TableHead>
                 ))}
-                <TableHead className="pr-4 text-right">Total</TableHead>
+                <TableHead className="pr-4 text-right">{t("common.total")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

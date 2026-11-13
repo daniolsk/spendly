@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CurrencyAddon } from "@/components/money";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
+import { useT } from "@/lib/i18n/client";
 import { monthLabel } from "@/lib/month";
 import { resetMonthPlan, saveMonthPlan } from "@/server/actions";
 
@@ -28,6 +29,7 @@ export function PlanEditor({
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function openEditor() {
     setValues(Object.fromEntries(rows.map((r) => [r.id, toInputValue(r.planned, currency)])));
@@ -43,7 +45,7 @@ export function PlanEditor({
     startTransition(async () => {
       const res = await saveMonthPlan({ month, entries: parsed.map((p) => ({ ...p, amount: p.amount! })) });
       if (res.ok) {
-        toast.success("Plan saved");
+        toast.success(t("plan.saved"));
         setOpen(false);
       } else toast.error(res.error);
     });
@@ -53,7 +55,7 @@ export function PlanEditor({
     startTransition(async () => {
       const res = await resetMonthPlan(month);
       if (res.ok) {
-        toast.success("Plan reset to category defaults");
+        toast.success(t("plan.wasReset"));
         setOpen(false);
       } else toast.error(res.error);
     });
@@ -63,13 +65,13 @@ export function PlanEditor({
     <>
       <Button variant="outline" size="sm" onClick={openEditor}>
         <PencilIcon />
-        Edit plan
+        {t("plan.edit")}
       </Button>
       <ResponsiveDialog
         open={open}
         onOpenChange={setOpen}
-        title={`Plan for ${monthLabel(month)}`}
-        description="Planned spending per category. Defaults come from Settings."
+        title={t("plan.title", { month: monthLabel(month, "long", t.locale) })}
+        description={t("plan.description")}
       >
         <div className="flex flex-col gap-3">
           {rows.map((r) => (
@@ -88,17 +90,17 @@ export function PlanEditor({
             </label>
           ))}
           <div className="flex items-center justify-between border-t pt-3 text-sm">
-            <span className="text-muted-foreground">Total planned</span>
+            <span className="text-muted-foreground">{t("plan.total")}</span>
             <span className="tabular font-semibold">{formatMoney(total, { currency })}</span>
           </div>
           <div className="flex gap-2 pt-1">
             {hasCustomPlan ? (
               <Button variant="outline" size="lg" className="h-11" onClick={reset} disabled={pending}>
-                Reset
+                {t("plan.reset")}
               </Button>
             ) : null}
             <Button size="lg" className="h-11 flex-1" onClick={save} disabled={pending || invalid}>
-              {pending ? "Saving…" : "Save plan"}
+              {pending ? t("common.saving") : t("plan.save")}
             </Button>
           </div>
         </div>

@@ -7,20 +7,27 @@ import { CategoryManager } from "@/components/settings/category-manager";
 import { InstallApp } from "@/components/settings/install-app";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { CurrencyForm } from "@/components/settings/currency-form";
+import { LanguageForm } from "@/components/settings/language-form";
 import { OpeningBalanceForm } from "@/components/settings/opening-balance-form";
 import { UsageLimits } from "@/components/settings/usage-limits";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toLanguage } from "@/lib/i18n";
+import { T } from "@/lib/i18n/client";
 import { currentMonthKey, zonedToday } from "@/lib/month";
 import { requireUser } from "@/server/dal";
+import { getT } from "@/server/i18n";
 import { getCategories, getSettings, getUsage } from "@/server/queries";
 
-export const metadata: Metadata = { title: "Settings" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("nav.settings") };
+}
 
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Settings" />
+      <PageHeader title={<T k="nav.settings" />} />
       <Suspense fallback={<Skeleton className="h-[32rem] rounded-xl" />}>
         <SettingsContent />
       </Suspense>
@@ -32,18 +39,19 @@ export default function SettingsPage() {
 async function SettingsContent() {
   const user = await requireUser();
   const month = currentMonthKey(zonedToday());
-  const [categories, settings, usage] = await Promise.all([
+  const [categories, settings, usage, t] = await Promise.all([
     getCategories(user.id, { includeArchived: true }),
     getSettings(user.id),
     getUsage(user.id, month),
+    getT(),
   ]);
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <Card>
         <CardHeader>
-          <CardTitle>Expense categories</CardTitle>
-          <CardDescription>Tap a category to edit it. Archived categories keep their history.</CardDescription>
+          <CardTitle>{t("settings.categories")}</CardTitle>
+          <CardDescription>{t("settings.categoriesHint")}</CardDescription>
         </CardHeader>
         <CardContent>
           <CategoryManager categories={categories} currency={settings.currency} />
@@ -52,8 +60,17 @@ async function SettingsContent() {
       <div className="flex flex-col gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Currency</CardTitle>
-            <CardDescription>Every amount in your account is shown in it. Changing it relabels amounts; it doesn’t convert them.</CardDescription>
+            <CardTitle>{t("settings.language")}</CardTitle>
+            <CardDescription>{t("settings.languageHint")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LanguageForm language={toLanguage(settings.language)} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.currency")}</CardTitle>
+            <CardDescription>{t("settings.currencyHint")}</CardDescription>
           </CardHeader>
           <CardContent>
             <CurrencyForm currency={settings.currency} />
@@ -61,8 +78,8 @@ async function SettingsContent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Opening balance</CardTitle>
-            <CardDescription>Money you had before the first tracked month. Used for “Balance since start”.</CardDescription>
+            <CardTitle>{t("settings.openingBalance")}</CardTitle>
+            <CardDescription>{t("settings.openingBalanceHint")}</CardDescription>
           </CardHeader>
           <CardContent>
             <OpeningBalanceForm openingBalance={settings.openingBalance} currency={settings.currency} />
@@ -70,7 +87,7 @@ async function SettingsContent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Account</CardTitle>
+            <CardTitle>{t("settings.account")}</CardTitle>
           </CardHeader>
           <CardContent>
             <AccountCard user={{ name: user.name, email: user.email, image: user.image }} />
@@ -78,8 +95,8 @@ async function SettingsContent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Home screen app</CardTitle>
-            <CardDescription>Add Spendly to your home screen to open it like an app, straight on the current month.</CardDescription>
+            <CardTitle>{t("settings.homeScreen")}</CardTitle>
+            <CardDescription>{t("settings.homeScreenHint")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col">
             <InstallApp />
@@ -87,8 +104,8 @@ async function SettingsContent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Usage limits</CardTitle>
-            <CardDescription>Caps that protect the service from abuse. Everyday use stays far below them.</CardDescription>
+            <CardTitle>{t("settings.limits")}</CardTitle>
+            <CardDescription>{t("settings.limitsHint")}</CardDescription>
           </CardHeader>
           <CardContent>
             <UsageLimits usage={usage} month={month} />
@@ -96,10 +113,8 @@ async function SettingsContent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Delete account</CardTitle>
-            <CardDescription>
-              Permanently deletes your account and all of its data. Signing in again later starts a fresh, empty account.
-            </CardDescription>
+            <CardTitle>{t("settings.deleteAccount")}</CardTitle>
+            <CardDescription>{t("settings.deleteAccountHint")}</CardDescription>
           </CardHeader>
           <CardContent>
             <DeleteAccount email={user.email} />

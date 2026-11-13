@@ -13,9 +13,11 @@ import { category, monthPlan, transaction, user as userTable, userSettings } fro
 import { auth } from "@/lib/auth";
 import { CATEGORY_COLOR_KEYS } from "@/lib/colors";
 import { CURRENCY_CODES } from "@/lib/currency";
+import { getTranslator, LANGUAGE_CODES, type MessageKey, type Vars } from "@/lib/i18n";
 import { LIMITS } from "@/lib/limits";
 import { monthRange } from "@/lib/month";
 import { requireUser } from "./dal";
+import { getT } from "./i18n";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -24,12 +26,34 @@ const MAX_AMOUNT = 2_000_000_000;
 const plannedAmount = z.number().int().min(0).max(MAX_AMOUNT);
 const monthKey = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const dateKey = z.iso.date();
+/** Zod messages are message keys, translated in fail(). */
+const msg = (key: MessageKey) => key;
+const categoryName = z.string().trim().min(1, msg("errors.nameRequired")).max(50);
 
-function fail(error: unknown): ActionResult {
+/** Translator in the user's language; English if it can't be loaded (e.g. the DB is down). */
+async function actionT() {
+  try {
+    return await getT();
+  } catch {
+    return getTranslator("en");
+  }
+}
+
+/** An error result with a translated message. */
+async function failWith(key: MessageKey, vars?: Vars): Promise<ActionResult> {
+  return { ok: false, error: (await actionT())(key, vars) };
+}
+
+// Zod messages in the schemas below are message keys; other Zod issues show a generic message.
+async function fail(error: unknown): Promise<ActionResult> {
   unstable_rethrow(error); // let auth redirects through
-  if (error instanceof z.ZodError) return { ok: false, error: error.issues[0]?.message ?? "Invalid input" };
+  if (error instanceof z.ZodError) {
+    const t = await actionT();
+    const message = error.issues[0]?.message ?? "";
+    return { ok: false, error: t.has(message) ? t(message) : t("errors.invalidInput") };
+  }
   logError(error);
-  return { ok: false, error: "Something went wrong. Please try again." };
+  return failWith("errors.generic");
 }
 
 /**
@@ -52,10 +76,8 @@ async function assertOwnCategory(userId: string, categoryId: string) {
     where: and(eq(category.id, categoryId), eq(category.userId, userId)),
     columns: { id: true },
   });
-  if (!row) throw new z.ZodError([{ code: "custom", message: "Unknown category", path: ["categoryId"], input: categoryId }]);
+  if (!row) throw new z.ZodError([{ code: "custom", message: msg("errors.unknownCategory"), path: ["categoryId"], input: categoryId }]);
 }
-
-const n = (v: number) => v.toLocaleString("en-US");
 
 // ---------------------------------------------------------------------------
 // Transactions
@@ -64,7 +86,7 @@ const n = (v: number) => v.toLocaleString("en-US");
 /**
  * Checks the per-user transaction caps (see lib/limits.ts) before a write.
  * New transactions count against every cap; an edit only against the month it
- * moves into (`excludeId` keeps it from counting itself). Returns an error or null.
+ * moves into (`excludeId` keeps it from counting itself). Returns the cap that was hit, or null.
  */
 async function checkTransactionLimits(userId: string, date: string, excludeId?: string) {
   const { start, end } = monthRange(date.slice(0, 7));
@@ -78,13 +100,10 @@ async function checkTransactionLimits(userId: string, date: string, excludeId?: 
     .from(transaction)
     .where(eq(transaction.userId, userId));
 
-  if (row.month >= LIMITS.transactionsPerMonth)
-    return `A month can have at most ${n(LIMITS.transactionsPerMonth)} transactions.`;
+  if (row.month >= LIMITS.transactionsPerMonth) return { key: "limits.perMonth", max: LIMITS.transactionsPerMonth } as const;
   if (excludeId) return null;
-  if (row.day >= LIMITS.transactionsPerDay)
-    return `You can add at most ${n(LIMITS.transactionsPerDay)} transactions in 24 hours. Try again later.`;
-  if (row.total >= LIMITS.transactionsTotal)
-    return `You've reached the limit of ${n(LIMITS.transactionsTotal)} transactions.`;
+  if (row.day >= LIMITS.transactionsPerDay) return { key: "limits.perDay", max: LIMITS.transactionsPerDay } as const;
+  if (row.total >= LIMITS.transactionsTotal) return { key: "limits.total", max: LIMITS.transactionsTotal } as const;
   return null;
 }
 
@@ -97,25 +116,25 @@ const transactionInput = z
     categoryId: z.uuid().nullable(),
     /** Ignored for hourly income, where it is computed as hours × rate. */
     amount: z.number().int().min(-MAX_AMOUNT).max(MAX_AMOUNT),
-    hours: z.number().positive("Enter hours worked").max(1000).nullable(),
+    hours: z.number().positive(msg("errors.enterHours")).max(1000).nullable(),
     /** Hourly rate in minor units; set only for hourly income. */
-    rate: z.number().int().positive("Enter the hourly rate").max(MAX_AMOUNT).nullable(),
+    rate: z.number().int().positive(msg("errors.enterRate")).max(MAX_AMOUNT).nullable(),
   })
-  .refine((t) => t.type === "income" || t.categoryId, { message: "Pick a category", path: ["categoryId"] })
+  .refine((t) => t.type === "income" || t.categoryId, { message: msg("errors.pickCategory"), path: ["categoryId"] })
   .refine((t) => t.type === "expense" || t.description.length > 0, {
-    message: "Enter the income source",
+    message: msg("errors.enterSource"),
     path: ["description"],
   })
-  .refine((t) => t.type === "income" || t.rate === null, { message: "Only income can be hourly", path: ["rate"] })
-  .refine((t) => t.rate === null || t.hours !== null, { message: "Enter hours worked", path: ["hours"] })
+  .refine((t) => t.type === "income" || t.rate === null, { message: msg("errors.onlyIncomeHourly"), path: ["rate"] })
+  .refine((t) => t.rate === null || t.hours !== null, { message: msg("errors.enterHours"), path: ["hours"] })
   .transform((t) => {
     // Hours are stored with 2 decimals; compute the amount from that same value.
     const hours = t.hours === null ? null : Math.round(t.hours * 100) / 100;
     return t.rate !== null && hours !== null ? { ...t, hours, amount: Math.round(hours * t.rate) } : { ...t, hours };
   })
-  .refine((t) => t.amount !== 0, { message: "Amount cannot be 0", path: ["amount"] })
-  .refine((t) => t.amount <= MAX_AMOUNT, { message: "Amount is too large", path: ["amount"] })
-  .refine((t) => t.type === "expense" || t.amount > 0, { message: "Income must be positive", path: ["amount"] });
+  .refine((t) => t.amount !== 0, { message: msg("errors.amountZero"), path: ["amount"] })
+  .refine((t) => t.amount <= MAX_AMOUNT, { message: msg("errors.amountTooLarge"), path: ["amount"] })
+  .refine((t) => t.type === "expense" || t.amount > 0, { message: msg("errors.incomePositive"), path: ["amount"] });
 
 export type TransactionInput = z.input<typeof transactionInput>;
 
@@ -124,8 +143,8 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
     const user = await requireUser();
     const data = transactionInput.parse(input);
     if (data.categoryId) await assertOwnCategory(user.id, data.categoryId);
-    const limitError = await checkTransactionLimits(user.id, data.date, data.id);
-    if (limitError) return { ok: false, error: limitError };
+    const limit = await checkTransactionLimits(user.id, data.date, data.id);
+    if (limit) return failWith(limit.key, { max: limit.max });
 
     const values = {
       type: data.type,
@@ -144,7 +163,7 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
         .set({ ...values, updatedAt: new Date() })
         .where(and(eq(transaction.id, data.id), eq(transaction.userId, user.id)))
         .returning({ id: transaction.id });
-      if (updated.length === 0) return { ok: false, error: "Transaction not found" };
+      if (updated.length === 0) return failWith("errors.transactionNotFound");
     } else {
       await db.insert(transaction).values({ ...values, userId: user.id });
     }
@@ -173,7 +192,7 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
 
 const categoryInput = z.object({
   id: z.uuid().optional(),
-  name: z.string().trim().min(1, "Name is required").max(50),
+  name: categoryName,
   color: z.enum(CATEGORY_COLOR_KEYS as [string, ...string[]]),
   excludeFromLiving: z.boolean(),
   defaultPlan: plannedAmount,
@@ -192,7 +211,7 @@ export async function saveCategory(input: CategoryInput): Promise<ActionResult> 
         .set(data)
         .where(and(eq(category.id, id), eq(category.userId, user.id)))
         .returning({ id: category.id });
-      if (updated.length === 0) return { ok: false, error: "Category not found" };
+      if (updated.length === 0) return failWith("errors.categoryNotFound");
     } else {
       const [{ next, count }] = await db
         .select({
@@ -202,7 +221,7 @@ export async function saveCategory(input: CategoryInput): Promise<ActionResult> 
         .from(category)
         .where(eq(category.userId, user.id));
       if (count >= LIMITS.categories)
-        return { ok: false, error: `You can have at most ${n(LIMITS.categories)} categories, archived ones included.` };
+        return failWith("limits.categories", { max: LIMITS.categories });
       await db.insert(category).values({ ...data, userId: user.id, sortOrder: next });
     }
     refresh();
@@ -236,7 +255,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
       where: and(eq(transaction.categoryId, categoryId), eq(transaction.userId, user.id)),
       columns: { id: true },
     });
-    if (used) return { ok: false, error: "This category has transactions. Archive it instead." };
+    if (used) return failWith("errors.categoryHasTransactions");
     await db.delete(category).where(and(eq(category.id, categoryId), eq(category.userId, user.id)));
     refresh();
     return { ok: true };
@@ -293,7 +312,7 @@ export async function saveMonthPlan(input: z.input<typeof planInput>): Promise<A
       (await db.select({ id: category.id }).from(category).where(eq(category.userId, user.id))).map((c) => c.id),
     );
     const valid = entries.filter((e) => owned.has(e.categoryId));
-    if (valid.length !== entries.length) return { ok: false, error: "Unknown category" };
+    if (valid.length !== entries.length) return failWith("errors.unknownCategory");
 
     if (valid.length) {
       const [{ months, hasThis }] = await db
@@ -304,7 +323,7 @@ export async function saveMonthPlan(input: z.input<typeof planInput>): Promise<A
         .from(monthPlan)
         .where(eq(monthPlan.userId, user.id));
       if (!hasThis && months >= LIMITS.planMonths)
-        return { ok: false, error: `At most ${n(LIMITS.planMonths)} months can have a custom plan.` };
+        return failWith("limits.planMonths", { max: LIMITS.planMonths });
     }
 
     await db.batch([
@@ -370,15 +389,39 @@ export async function saveCurrency(input: z.input<typeof currencyInput>): Promis
   }
 }
 
+const languageInput = z.enum(LANGUAGE_CODES);
+
+/** Sets the UI language. It only changes text and date formatting; no stored data is touched. */
+export async function saveLanguage(input: z.input<typeof languageInput>): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const language = languageInput.parse(input);
+    await db
+      .insert(userSettings)
+      .values({ userId: user.id, language })
+      .onConflictDoUpdate({ target: userSettings.userId, set: { language, updatedAt: new Date() } });
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 const onboardingInput = z.object({
   currency: currencyInput,
-  /** Existing categories to keep, in display order; the user's other active categories are removed. */
-  keep: z.array(z.object({ id: z.uuid(), defaultPlan: plannedAmount })).max(LIMITS.categories),
+  language: languageInput,
+  /**
+   * Existing categories to keep, in display order; the user's other active categories are removed.
+   * `name` renames a kept one: setup sends it for default categories shown in the picked language.
+   */
+  keep: z
+    .array(z.object({ id: z.uuid(), defaultPlan: plannedAmount, name: categoryName.optional() }))
+    .max(LIMITS.categories),
   /** New categories created during setup. */
   add: z
     .array(
       z.object({
-        name: z.string().trim().min(1, "Name is required").max(50),
+        name: categoryName,
         color: z.enum(CATEGORY_COLOR_KEYS as [string, ...string[]]),
         defaultPlan: plannedAmount,
       }),
@@ -389,30 +432,30 @@ const onboardingInput = z.object({
 });
 
 /**
- * First-run setup (src/app/welcome): currency plus the optional categories, monthly plans and
+ * First-run setup (src/app/welcome): language and currency plus the optional categories, monthly plans and
  * opening balance, applied in one batch. Only allowed until the currency is confirmed, so it
  * can't be used later to wipe categories.
  */
 export async function completeOnboarding(input: z.input<typeof onboardingInput>): Promise<ActionResult> {
   try {
     const user = await requireUser();
-    const { currency, keep, add, openingBalance } = onboardingInput.parse(input);
-    if (keep.length + add.length === 0) return { ok: false, error: "Keep at least one category." };
+    const { currency, language, keep, add, openingBalance } = onboardingInput.parse(input);
+    if (keep.length + add.length === 0) return failWith("errors.keepOneCategory");
 
     const settings = await db.query.userSettings.findFirst({
       where: eq(userSettings.userId, user.id),
       columns: { currencyConfirmedAt: true },
     });
-    if (settings?.currencyConfirmedAt) return { ok: false, error: "Setup is already done. Use Settings instead." };
+    if (settings?.currencyConfirmedAt) return failWith("errors.setupDone");
 
     const owned = await db
       .select({ id: category.id, archived: category.archived })
       .from(category)
       .where(eq(category.userId, user.id));
     const ownedIds = new Set(owned.map((c) => c.id));
-    if (keep.some((k) => !ownedIds.has(k.id))) return { ok: false, error: "Unknown category" };
+    if (keep.some((k) => !ownedIds.has(k.id))) return failWith("errors.unknownCategory");
     if (owned.length + add.length > LIMITS.categories)
-      return { ok: false, error: `You can have at most ${n(LIMITS.categories)} categories.` };
+      return failWith("limits.categoriesSetup", { max: LIMITS.categories });
 
     // Removed categories are deleted, or archived if they already have transactions (see deleteCategory).
     const keepIds = new Set(keep.map((k) => k.id));
@@ -431,11 +474,11 @@ export async function completeOnboarding(input: z.input<typeof onboardingInput>)
     const deleteIds = removeIds.filter((id) => !usedIds.has(id));
 
     const now = new Date();
-    const settingsValues = { currency, currencyConfirmedAt: now, ...(openingBalance !== null && { openingBalance }) };
-    const writes: BatchItem<"pg">[] = keep.map(({ id, defaultPlan }, i) =>
+    const settingsValues = { currency, language, currencyConfirmedAt: now, ...(openingBalance !== null && { openingBalance }) };
+    const writes: BatchItem<"pg">[] = keep.map(({ id, defaultPlan, name }, i) =>
       db
         .update(category)
-        .set({ defaultPlan, sortOrder: i })
+        .set({ defaultPlan, sortOrder: i, ...(name && { name }) })
         .where(and(eq(category.id, id), eq(category.userId, user.id))),
     );
     if (archiveIds.length)
@@ -479,7 +522,7 @@ export async function deleteAccount(confirmEmail: string): Promise<ActionResult>
   try {
     const user = await requireUser();
     if (z.string().trim().toLowerCase().parse(confirmEmail) !== user.email.toLowerCase()) {
-      return { ok: false, error: "The email doesn’t match your account." };
+      return failWith("errors.emailMismatch");
     }
     // Children first: transaction.categoryId is ON DELETE RESTRICT, so categories can only
     // go once their transactions are gone. Deleting the user cascades to session + account.

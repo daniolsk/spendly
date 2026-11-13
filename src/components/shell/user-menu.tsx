@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
+import { useT } from "@/lib/i18n/client";
 
 export type MenuUser = { name: string; email: string; image?: string | null };
 
@@ -39,6 +40,7 @@ export function useSignOut() {
 export function UserMenu({ user }: { user: MenuUser }) {
   const { theme, setTheme } = useTheme();
   const signOut = useSignOut();
+  const t = useT();
 
   return (
     <DropdownMenu>
@@ -53,21 +55,21 @@ export function UserMenu({ user }: { user: MenuUser }) {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" className="w-56">
-        <DropdownMenuLabel>Theme</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("theme.label")}</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
           <DropdownMenuRadioItem value="light">
-            <SunIcon /> Light
+            <SunIcon /> {t("theme.light")}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">
-            <MoonIcon /> Dark
+            <MoonIcon /> {t("theme.dark")}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">
-            <MonitorIcon /> System
+            <MonitorIcon /> {t("theme.system")}
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut}>
-          <LogOutIcon /> Sign out
+          <LogOutIcon /> {t("account.signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
