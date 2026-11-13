@@ -6,6 +6,7 @@ import { BuildInfo } from "@/components/build-info";
 import { InactivityLock } from "@/components/shell/inactivity-lock";
 import { MobileTabBar, SidebarNav } from "@/components/shell/nav";
 import { UserMenu } from "@/components/shell/user-menu";
+import { PeriodSwipe } from "@/components/swipe-navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/server/dal";
 import { getSettings } from "@/server/queries";
@@ -49,6 +50,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       </main>
       <MobileTabBar />
       <InactivityLock />
+      <Suspense fallback={null}>
+        <PeriodSwipe />
+      </Suspense>
       <Suspense fallback={null}>
         <CurrencyGate />
       </Suspense>
