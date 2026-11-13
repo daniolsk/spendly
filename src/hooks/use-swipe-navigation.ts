@@ -24,27 +24,38 @@ function blocksSwipe(target: EventTarget | null) {
 
 /**
  * Swipe left → `next`, swipe right → `prev` on touch screens.
- * Returns the live horizontal drag (`dx`, 0 when idle), the direction of a navigation in flight, and `pending`.
+ * `onDrag` gets the live horizontal drag (0 when released or cancelled) once per frame, outside React,
+ * so the indicator can follow the finger without re-rendering. Returns the direction of a navigation
+ * in flight and whether it is still loading.
  */
-export function useSwipeNavigation(prev: string, next: string) {
+export function useSwipeNavigation(prev: string, next: string, onDrag: (dx: number) => void) {
   const router = useRouter();
-  const [dx, setDx] = useState(0);
   const [target, setTarget] = useState<"prev" | "next" | null>(null);
   const [pending, startTransition] = useTransition();
   const hrefs = useRef({ prev, next });
+  const dragRef = useRef(onDrag);
   useEffect(() => {
     hrefs.current = { prev, next };
-  }, [prev, next]);
+    dragRef.current = onDrag;
+  }, [prev, next, onDrag]);
 
   useEffect(() => {
     // axis: null while undecided, "x" once it's a swipe, "y" once it's a scroll (ignored until the next touch).
     let start: { x: number; y: number; axis: "x" | "y" | null } | null = null;
     let lastDx = 0;
+    let frame = 0;
+
+    function emit(dx: number) {
+      lastDx = dx;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => dragRef.current(dx));
+    }
 
     function reset() {
+      const wasDragging = start?.axis === "x";
       start = null;
+      if (wasDragging) emit(0);
       lastDx = 0;
-      setDx(0);
     }
 
     function onStart(e: TouchEvent) {
@@ -75,15 +86,16 @@ export function useSwipeNavigation(prev: string, next: string) {
       }
       // Selecting text with a long press shouldn't turn into a swipe.
       if (window.getSelection()?.toString()) return reset();
-      lastDx = moveX;
-      setDx(moveX);
+      emit(moveX);
     }
 
     function onEnd() {
       const committed = start?.axis === "x" && Math.abs(lastDx) >= SWIPE_DISTANCE;
       const dir = lastDx < 0 ? "next" : "prev";
-      reset();
-      if (!committed) return;
+      if (!committed) return reset();
+      cancelAnimationFrame(frame);
+      start = null;
+      lastDx = 0;
       setTarget(dir);
       startTransition(() => router.push(hrefs.current[dir]));
     }
@@ -97,8 +109,9 @@ export function useSwipeNavigation(prev: string, next: string) {
       document.removeEventListener("touchmove", onMove);
       document.removeEventListener("touchend", onEnd);
       document.removeEventListener("touchcancel", reset);
+      cancelAnimationFrame(frame);
     };
   }, [router]);
 
-  return { dx, target: pending ? target : null, pending };
+  return { target: pending ? target : null, pending };
 }
