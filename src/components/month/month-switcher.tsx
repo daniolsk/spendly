@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
+import { SwipeNavigation } from "@/components/swipe-navigation";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { currentMonthKey, monthLabel, monthName, parseMonthKey, shiftMonth } from "@/lib/month";
 
@@ -24,6 +25,12 @@ export function MonthSwitcher({ month }: { month: string }) {
 
   return (
     <div className="flex items-center gap-1 max-md:w-full">
+      <SwipeNavigation
+        prev={monthHref(shiftMonth(month, -1))}
+        next={monthHref(shiftMonth(month, 1))}
+        prevLabel={monthLabel(shiftMonth(month, -1))}
+        nextLabel={monthLabel(shiftMonth(month, 1))}
+      />
       <Button variant="ghost" size="icon-lg" asChild>
         <Link href={monthHref(shiftMonth(month, -1))} aria-label="Previous month">
           <ChevronLeftIcon />
