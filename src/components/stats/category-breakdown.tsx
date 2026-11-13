@@ -2,6 +2,7 @@ import { cn } from "cn";
 import { CategoryLabel } from "@/components/category-dot";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatMoney, formatPercent } from "@/lib/money";
+import { getT } from "@/server/i18n";
 
 export type BreakdownRow = {
   id: string;
@@ -12,7 +13,8 @@ export type BreakdownRow = {
 };
 
 /** Doubles as the donut's legend and its accessible table view. */
-export function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; currency: string }) {
+export async function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; currency: string }) {
+  const t = await getT();
   const showPlan = rows.some((r) => r.planned !== undefined);
   const totalSpent = rows.reduce((a, r) => a + r.spent, 0);
   const totalPlanned = rows.reduce((a, r) => a + (r.planned ?? 0), 0);
@@ -21,15 +23,15 @@ export function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; cu
     <Table className="text-sm">
       <TableHeader>
         <TableRow>
-          <TableHead>Category</TableHead>
-          <TableHead className="text-right">Spent</TableHead>
+          <TableHead>{t("common.category")}</TableHead>
+          <TableHead className="text-right">{t("stats.colSpent")}</TableHead>
           {showPlan ? (
             <>
-              <TableHead className="hidden text-right sm:table-cell">Planned</TableHead>
-              <TableHead className="w-28 text-right sm:w-36">Of plan</TableHead>
+              <TableHead className="hidden text-right sm:table-cell">{t("stats.colPlanned")}</TableHead>
+              <TableHead className="w-28 text-right sm:w-36">{t("stats.colOfPlan")}</TableHead>
             </>
           ) : (
-            <TableHead className="w-20 text-right">Share</TableHead>
+            <TableHead className="w-20 text-right">{t("stats.colShare")}</TableHead>
           )}
         </TableRow>
       </TableHeader>
@@ -51,7 +53,7 @@ export function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; cu
                   <TableCell>
                     <div className="flex flex-col items-end gap-1">
                       <span className={cn("tabular text-xs", over ? "font-medium text-destructive" : "text-muted-foreground")}>
-                        {r.planned ? formatPercent(ratio, currency) : r.spent ? "unplanned" : "—"}
+                        {r.planned ? formatPercent(ratio, currency) : r.spent ? t("stats.unplanned") : "—"}
                         {over && r.planned ? " ▲" : ""}
                       </span>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
@@ -74,7 +76,7 @@ export function CategoryBreakdown({ rows, currency }: { rows: BreakdownRow[]; cu
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell>Total</TableCell>
+          <TableCell>{t("common.total")}</TableCell>
           <TableCell className="tabular text-right">{formatMoney(totalSpent, { currency })}</TableCell>
           {showPlan ? (
             <>

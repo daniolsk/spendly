@@ -2,7 +2,8 @@
 
 import { cn } from "cn";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CURRENCIES, type CurrencyCode } from "@/lib/currency";
+import { CURRENCIES, currencyName, type CurrencyCode } from "@/lib/currency";
+import { useLanguage } from "@/lib/i18n/client";
 import { formatMoney } from "@/lib/money";
 
 export function CurrencySelect({
@@ -16,6 +17,7 @@ export function CurrencySelect({
   id?: string;
   className?: string;
 }) {
+  const language = useLanguage();
   return (
     <Select value={value} onValueChange={(v) => onChange(v as CurrencyCode)}>
       <SelectTrigger id={id} className={cn("w-full", className)}>
@@ -25,7 +27,7 @@ export function CurrencySelect({
         {CURRENCIES.map((c) => (
           <SelectItem key={c.code} value={c.code}>
             <span className="w-9 font-medium">{c.code}</span>
-            <span className="truncate text-muted-foreground">{c.name}</span>
+            <span className="truncate text-muted-foreground">{currencyName(c.code, language)}</span>
           </SelectItem>
         ))}
       </SelectContent>

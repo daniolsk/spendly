@@ -12,6 +12,8 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { Translator } from "@/lib/i18n";
+import { useT } from "@/lib/i18n/client";
 import { formatDay, todayKey } from "@/lib/month";
 import { useTransactionEditor } from "./transaction-editor";
 
@@ -36,23 +38,24 @@ export function TransactionList({
   currency: string;
 }) {
   const { openEdit } = useTransactionEditor();
+  const t = useT();
   const [filter, setFilter] = useState<Filter>("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const visible = transactions.filter(
-    (t) =>
-      (filter === "all" || t.type === filter) &&
-      (categoryFilter === "all" || t.categoryId === categoryFilter),
+    (tx) =>
+      (filter === "all" || tx.type === filter) &&
+      (categoryFilter === "all" || tx.categoryId === categoryFilter),
   );
   const total = signedSum(visible);
 
   const groups = new Map<string, Transaction[]>();
-  for (const t of visible) groups.set(t.date, [...(groups.get(t.date) ?? []), t]);
+  for (const tx of visible) groups.set(tx.date, [...(groups.get(tx.date) ?? []), tx]);
 
   const today = todayKey();
 
-  const usedCategories = categories.filter((c) => transactions.some((t) => t.categoryId === c.id));
+  const usedCategories = categories.filter((c) => transactions.some((tx) => tx.categoryId === c.id));
 
   return (
     <div className="flex flex-col gap-3">
@@ -72,22 +75,22 @@ export function TransactionList({
             }}
           >
             <ToggleGroupItem value="all" className="@max-xl/filters:flex-1">
-              All
+              {t("tx.all")}
             </ToggleGroupItem>
             <ToggleGroupItem value="expense" className="@max-xl/filters:flex-1">
-              Expenses
+              {t("common.expenses")}
             </ToggleGroupItem>
             <ToggleGroupItem value="income" className="@max-xl/filters:flex-1">
-              Income
+              {t("common.income")}
             </ToggleGroupItem>
           </ToggleGroup>
           {filter !== "income" && usedCategories.length > 0 ? (
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger size="sm" className="min-w-40 @max-xl/filters:w-full" aria-label="Filter by category">
+              <SelectTrigger size="sm" className="min-w-40 @max-xl/filters:w-full" aria-label={t("tx.filterByCategory")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">{t("tx.allCategories")}</SelectItem>
                 {usedCategories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     <CategoryLabel name={c.name} color={c.color} />
@@ -97,7 +100,7 @@ export function TransactionList({
             </Select>
           ) : null}
           <div className="ml-auto text-sm text-muted-foreground @max-xl/filters:w-full @max-xl/filters:text-right">
-            {visible.length} {visible.length === 1 ? "item" : "items"} ·{" "}
+            {t("tx.items", { count: visible.length })} ·{" "}
             <Money value={total} currency={currency} className="font-medium text-foreground" />
           </div>
         </div>
@@ -109,9 +112,9 @@ export function TransactionList({
             <EmptyMedia variant="icon">
               <ReceiptIcon />
             </EmptyMedia>
-            <EmptyTitle>No transactions</EmptyTitle>
+            <EmptyTitle>{t("tx.empty")}</EmptyTitle>
             <EmptyDescription>
-              {transactions.length ? "Nothing matches these filters." : "Add your first expense or income for this month."}
+              {transactions.length ? t("tx.noMatches") : t("tx.emptyHint")}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -125,37 +128,37 @@ export function TransactionList({
                   className="flex items-center gap-1.5 px-1 text-xs font-medium text-muted-foreground data-[today=true]:text-foreground"
                   data-today={date === today}
                 >
-                  {formatDay(date)}
+                  {formatDay(date, t.locale)}
                   {date === today ? <TodayBadge /> : null}
                 </h3>
                 <Card className="gap-0 py-0 data-[today=true]:ring-primary/40" data-today={date === today}>
-                  {items.map((t, i) => {
-                    const cat = t.categoryId ? categoryById.get(t.categoryId) : undefined;
+                  {items.map((tx, i) => {
+                    const cat = tx.categoryId ? categoryById.get(tx.categoryId) : undefined;
                     const subtitle =
-                      t.type === "income"
-                        ? `Income${t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}`
-                        : [t.description ? cat?.name : null, t.amount < 0 ? "Refund" : null].filter(Boolean).join(" · ");
+                      tx.type === "income"
+                        ? incomeLabel(tx, t)
+                        : [tx.description ? cat?.name : null, tx.amount < 0 ? t("tx.refund") : null].filter(Boolean).join(" · ");
                     return (
                       <button
-                        key={t.id}
+                        key={tx.id}
                         type="button"
-                        onClick={() => openEdit(t)}
+                        onClick={() => openEdit(tx)}
                         className="flex min-h-14 items-center gap-3 px-4 py-2.5 text-left transition-colors active:bg-muted data-[divider=true]:border-t"
                         data-divider={i > 0}
                       >
                         {/* Leading dot so the category color is visible even without a description */}
-                        {t.type === "income" ? (
+                        {tx.type === "income" ? (
                           <ArrowDownLeftIcon aria-hidden className="-mx-0.5 size-3.5 shrink-0 text-income" />
                         ) : (
                           <CategoryDot color={cat?.color ?? "gray"} />
                         )}
                         <div className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate font-medium">
-                            {t.description || cat?.name || (t.type === "income" ? "Income" : "Expense")}
+                            {tx.description || cat?.name || (tx.type === "income" ? t("common.incomeItem") : t("common.expense"))}
                           </span>
                           {subtitle ? <span className="truncate text-xs text-muted-foreground">{subtitle}</span> : null}
                         </div>
-                        <Money value={t.amount} type={t.type} currency={currency} className="font-medium" />
+                        <Money value={tx.amount} type={tx.type} currency={currency} className="font-medium" />
                       </button>
                     );
                   })}
@@ -169,9 +172,9 @@ export function TransactionList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-56 pl-4">Category</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="w-36 pr-4 text-right">Amount</TableHead>
+                  <TableHead className="w-56 pl-4">{t("common.category")}</TableHead>
+                  <TableHead>{t("tx.description")}</TableHead>
+                  <TableHead className="w-36 pr-4 text-right">{t("common.amount")}</TableHead>
                 </TableRow>
               </TableHeader>
               {[...groups.entries()].map(([date, items]) => (
@@ -181,7 +184,7 @@ export function TransactionList({
                   <TableRow className="bg-muted/60 hover:bg-muted/60">
                     <TableCell colSpan={2} className={cn("pl-4 font-medium", date === today && TODAY_BAR)}>
                       <span className="flex items-center gap-2">
-                        {formatDay(date)}
+                        {formatDay(date, t.locale)}
                         {date === today ? <TodayBadge /> : null}
                       </span>
                     </TableCell>
@@ -189,33 +192,33 @@ export function TransactionList({
                       <Money value={signedSum(items)} currency={currency} />
                     </TableCell>
                   </TableRow>
-                  {items.map((t) => {
-                    const cat = t.categoryId ? categoryById.get(t.categoryId) : undefined;
+                  {items.map((tx) => {
+                    const cat = tx.categoryId ? categoryById.get(tx.categoryId) : undefined;
                     return (
                       <TableRow
-                        key={t.id}
+                        key={tx.id}
                         className="cursor-pointer"
                         tabIndex={0}
-                        onClick={() => openEdit(t)}
+                        onClick={() => openEdit(tx)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            openEdit(t);
+                            openEdit(tx);
                           }
                         }}
                       >
                         <TableCell className={cn("pl-4", date === today && TODAY_BAR)}>
-                          {t.type === "expense" && cat ? (
-                            <CategoryLabel name={t.amount < 0 ? `${cat.name} · Refund` : cat.name} color={cat.color} />
+                          {tx.type === "expense" && cat ? (
+                            <CategoryLabel name={tx.amount < 0 ? `${cat.name} · ${t("tx.refund")}` : cat.name} color={cat.color} />
                           ) : (
-                            <span className="text-muted-foreground">Income{t.rate && t.hours ? ` · ${Number(t.hours)} h` : ""}</span>
+                            <span className="text-muted-foreground">{incomeLabel(tx, t)}</span>
                           )}
                         </TableCell>
                         <TableCell className="max-w-0 truncate">
-                          {t.description || <span className="text-muted-foreground">—</span>}
+                          {tx.description || <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell className="pr-4 text-right font-medium">
-                          <Money value={t.amount} type={t.type} currency={currency} />
+                          <Money value={tx.amount} type={tx.type} currency={currency} />
                         </TableCell>
                       </TableRow>
                     );
@@ -225,7 +228,7 @@ export function TransactionList({
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={2} className="pl-4">
-                    Total
+                    {t("common.total")}
                   </TableCell>
                   <TableCell className="pr-4 text-right">
                     <Money value={total} currency={currency} />
@@ -241,5 +244,10 @@ export function TransactionList({
 }
 
 function TodayBadge() {
-  return <Badge className="h-4.5 px-1.5 text-[0.7rem]">Today</Badge>;
+  const t = useT();
+  return <Badge className="h-4.5 px-1.5 text-[0.7rem]">{t("tx.today")}</Badge>;
+}
+
+function incomeLabel(tx: Transaction, t: Translator) {
+  return tx.rate && tx.hours ? `${t("common.incomeItem")} · ${t("common.hours", { hours: Number(tx.hours) })}` : t("common.incomeItem");
 }

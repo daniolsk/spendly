@@ -10,11 +10,13 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { initials, useSignOut, type MenuUser } from "@/components/shell/user-menu";
 import { useMounted } from "@/hooks/use-media-query";
 import { authClient } from "@/lib/auth-client";
+import { useT } from "@/lib/i18n/client";
 
 export function AccountCard({ user }: { user: MenuUser }) {
   const { theme, setTheme } = useTheme();
   const signOut = useSignOut();
   const mounted = useMounted();
+  const t = useT();
   const [revoking, setRevoking] = useState(false);
 
   async function signOutOtherDevices() {
@@ -22,8 +24,8 @@ export function AccountCard({ user }: { user: MenuUser }) {
     const { error } = await authClient.revokeOtherSessions();
     setRevoking(false);
     // Other devices keep a short-lived session cache, so they drop off within ~5 minutes.
-    if (error) toast.error("Couldn’t sign out other devices. Please try again.");
-    else toast.success("Other devices will be signed out within 5 minutes.");
+    if (error) toast.error(t("account.signOutOthersError"));
+    else toast.success(t("account.signOutOthersDone"));
   }
 
   return (
@@ -38,27 +40,27 @@ export function AccountCard({ user }: { user: MenuUser }) {
           <span className="truncate text-sm text-muted-foreground">{user.email}</span>
         </div>
         <Button variant="outline" onClick={signOut}>
-          <LogOutIcon /> Sign out
+          <LogOutIcon /> {t("account.signOut")}
         </Button>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium">Theme</span>
+        <span className="text-sm font-medium">{t("theme.label")}</span>
         <ToggleGroup type="single" variant="outline" value={mounted ? theme : ""} onValueChange={(v) => v && setTheme(v)}>
-          <ToggleGroupItem value="light" aria-label="Light">
+          <ToggleGroupItem value="light" aria-label={t("theme.light")}>
             <SunIcon />
           </ToggleGroupItem>
-          <ToggleGroupItem value="dark" aria-label="Dark">
+          <ToggleGroupItem value="dark" aria-label={t("theme.dark")}>
             <MoonIcon />
           </ToggleGroupItem>
-          <ToggleGroupItem value="system" aria-label="System">
+          <ToggleGroupItem value="system" aria-label={t("theme.system")}>
             <MonitorIcon />
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm font-medium">Other devices</span>
+        <span className="text-sm font-medium">{t("account.otherDevices")}</span>
         <Button variant="outline" onClick={signOutOtherDevices} disabled={revoking}>
-          <LaptopMinimalIcon /> {revoking ? "Signing out…" : "Sign out other devices"}
+          <LaptopMinimalIcon /> {revoking ? t("account.signingOut") : t("account.signOutOthers")}
         </Button>
       </div>
     </div>

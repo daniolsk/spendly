@@ -17,10 +17,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/lib/i18n/client";
 import { deleteAccount } from "@/server/actions";
 
 export function DeleteAccount({ email }: { email: string }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [pending, startTransition] = useTransition();
@@ -35,7 +37,7 @@ export function DeleteAccount({ email }: { email: string }) {
         toast.error(res.error);
         return;
       }
-      toast.success("Your account has been deleted");
+      toast.success(t("account.deleted"));
       router.replace("/");
       router.refresh();
     });
@@ -52,21 +54,18 @@ export function DeleteAccount({ email }: { email: string }) {
     >
       <AlertDialogTrigger asChild>
         <Button variant="destructive">
-          <Trash2Icon /> Delete account
+          <Trash2Icon /> {t("settings.deleteAccount")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <form onSubmit={submit} className="grid gap-4">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              All your transactions, income, categories, plans and settings will be permanently deleted. This cannot be
-              undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("account.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("account.deleteDescription")}</AlertDialogDescription>
           </AlertDialogHeader>
           <Field>
             <FieldLabel htmlFor="delete-account-email" className="block font-normal">
-              Type <span className="font-medium wrap-anywhere">{email}</span> to confirm
+              {t.rich("account.deleteConfirm", { email: <span className="font-medium wrap-anywhere">{email}</span> })}
             </FieldLabel>
             <Input
               id="delete-account-email"
@@ -80,9 +79,9 @@ export function DeleteAccount({ email }: { email: string }) {
             />
           </Field>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>{t("common.cancel")}</AlertDialogCancel>
             <Button type="submit" variant="destructive" disabled={!matches || pending}>
-              {pending ? "Deleting…" : "Delete account"}
+              {pending ? t("account.deleting") : t("settings.deleteAccount")}
             </Button>
           </AlertDialogFooter>
         </form>

@@ -15,11 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/money";
 import { isMonthKey, monthLabel } from "@/lib/month";
 import { requireUser } from "@/server/dal";
+import { getT } from "@/server/i18n";
 import { getMonthData } from "@/server/queries";
 
 export async function generateMetadata({ params }: PageProps<"/m/[month]">): Promise<Metadata> {
   const { month } = await params;
-  return { title: isMonthKey(month) ? monthLabel(month) : "Month" };
+  const t = await getT();
+  return { title: isMonthKey(month) ? monthLabel(month, "long", t.locale) : t("nav.month") };
 }
 
 export default function MonthPage(props: PageProps<"/m/[month]">) {
@@ -35,7 +37,7 @@ async function MonthContent({ params }: PageProps<"/m/[month]">) {
   if (!isMonthKey(month)) notFound();
 
   const user = await requireUser();
-  const data = await getMonthData(user.id, month);
+  const [data, t] = await Promise.all([getMonthData(user.id, month), getT()]);
   const { stats, settings } = data;
   const currency = settings.currency;
 
@@ -60,23 +62,23 @@ async function MonthContent({ params }: PageProps<"/m/[month]">) {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatTile
             icon={<ArrowDownLeftIcon className="size-3.5" />}
-            label="Income"
+            label={t("common.income")}
             value={<span className="text-income">{formatMoney(stats.income, { currency })}</span>}
           />
           <StatTile
             icon={<ArrowUpRightIcon className="size-3.5" />}
-            label="Expenses"
+            label={t("common.expenses")}
             value={formatMoney(stats.expenses, { currency })}
-            hint={stats.plannedTotal ? `of ${formatMoney(stats.plannedTotal, { currency })} planned` : undefined}
+            hint={stats.plannedTotal ? t("month.ofPlanned", { amount: formatMoney(stats.plannedTotal, { currency }) }) : undefined}
           />
           <StatTile
             icon={<ScaleIcon className="size-3.5" />}
-            label="Balance"
+            label={t("common.balance")}
             value={<Money value={stats.balance} currency={currency} />}
           />
           <StatTile
             icon={<PiggyBankIcon className="size-3.5" />}
-            label="Since start"
+            label={t("common.sinceStart")}
             value={<Money value={stats.cumulativeBalance} currency={currency} />}
           />
         </div>

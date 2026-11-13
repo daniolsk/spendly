@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { cache } from "react";
 import { db } from "@/db";
 import { category, monthPlan, transaction, userSettings, type Category } from "@/db/schema";
 import type { Usage } from "@/lib/limits";
@@ -7,10 +8,11 @@ import { daysInMonth, monthRange } from "@/lib/month";
 
 // Every function here takes the authenticated userId and scopes all queries by it.
 
-export async function getSettings(userId: string) {
+/** Cached per request: the app layout, pages and translations all read it. */
+export const getSettings = cache(async (userId: string) => {
   const row = await db.query.userSettings.findFirst({ where: eq(userSettings.userId, userId) });
-  return row ?? { userId, currency: "PLN", currencyConfirmedAt: null, openingBalance: 0, updatedAt: new Date() };
-}
+  return row ?? { userId, currency: "PLN", currencyConfirmedAt: null, language: "en", openingBalance: 0, updatedAt: new Date() };
+});
 
 export async function getCategories(userId: string, { includeArchived = false } = {}) {
   return db

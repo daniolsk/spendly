@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 /** Public privacy policy, linked from the landing page and the Google OAuth consent screen. */
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" lastUpdated="2 November 2026">
+    <LegalPage title="Privacy Policy" lastUpdated="13 November 2026">
       <p>
         Spendly (<span className="whitespace-nowrap">spendly.danielskowron.com</span>) is a personal expense tracker operated
         by Daniel Skowron. This policy explains what data Spendly collects, how it is used and stored, and the choices you
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
       <Section title="Data you enter">
         <p>
           Spendly stores what you add to the app: expenses and income (amount, date, description, category, and hours and
-          hourly rate for hourly income), your categories and monthly plans, and your opening balance. This data is used only
+          hourly rate for hourly income), your categories and monthly plans, your opening balance, and your account settings (currency and language). This data is used only
           to show you your own budget, statistics and history.
         </p>
       </Section>

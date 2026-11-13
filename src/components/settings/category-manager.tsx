@@ -30,7 +30,8 @@ import { Input } from "@/components/ui/input";
 import { CurrencyAddon } from "@/components/money";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
-import { CATEGORY_COLOR_KEYS, CATEGORY_COLORS, colorVar } from "@/lib/colors";
+import { CATEGORY_COLOR_KEYS, colorVar } from "@/lib/colors";
+import { useT } from "@/lib/i18n/client";
 import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
 import {
   deleteCategory,
@@ -44,6 +45,7 @@ export function CategoryManager({ categories, currency }: { categories: Category
   const [editing, setEditing] = useState<Category | "new" | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [pending, startTransition] = useTransition();
+  const t = useT();
   const active = categories.filter((c) => !c.archived);
   const archived = categories.filter((c) => c.archived);
 
@@ -67,49 +69,49 @@ export function CategoryManager({ categories, currency }: { categories: Category
         <button type="button" className="flex min-w-0 flex-1 flex-col text-left" onClick={() => open(c)}>
           <span className="truncate font-medium">{c.name}</span>
           <span className="text-xs text-muted-foreground">
-            Plan {formatMoney(c.defaultPlan, { currency })} / month
+            {t("cat.planPerMonth", { amount: formatMoney(c.defaultPlan, { currency }) })}
           </span>
         </button>
         {c.excludeFromLiving ? (
           <Badge variant="secondary" className="hidden sm:inline-flex">
-            Not living cost
+            {t("cat.notLiving")}
           </Badge>
         ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-lg" aria-label={`Actions for ${c.name}`} disabled={pending}>
+            <Button variant="ghost" size="icon-lg" aria-label={t("cat.actionsFor", { name: c.name })} disabled={pending}>
               <MoreHorizontalIcon />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => open(c)}>
-              <PencilIcon /> Edit
+              <PencilIcon /> {t("common.edit")}
             </DropdownMenuItem>
             {!c.archived ? (
               <>
                 <DropdownMenuItem disabled={index === 0} onClick={() => run(() => moveCategory(c.id, "up"))}>
-                  <ArrowUpIcon /> Move up
+                  <ArrowUpIcon /> {t("cat.moveUp")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={index === list.length - 1}
                   onClick={() => run(() => moveCategory(c.id, "down"))}
                 >
-                  <ArrowDownIcon /> Move down
+                  <ArrowDownIcon /> {t("cat.moveDown")}
                 </DropdownMenuItem>
               </>
             ) : null}
             <DropdownMenuSeparator />
             {c.archived ? (
-              <DropdownMenuItem onClick={() => run(() => setCategoryArchived(c.id, false), "Category restored")}>
-                <ArchiveRestoreIcon /> Restore
+              <DropdownMenuItem onClick={() => run(() => setCategoryArchived(c.id, false), t("cat.restored"))}>
+                <ArchiveRestoreIcon /> {t("cat.restore")}
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onClick={() => run(() => setCategoryArchived(c.id, true), "Category archived")}>
-                <ArchiveIcon /> Archive
+              <DropdownMenuItem onClick={() => run(() => setCategoryArchived(c.id, true), t("cat.archived"))}>
+                <ArchiveIcon /> {t("cat.archive")}
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem variant="destructive" onClick={() => run(() => deleteCategory(c.id), "Category deleted")}>
-              <Trash2Icon /> Delete
+            <DropdownMenuItem variant="destructive" onClick={() => run(() => deleteCategory(c.id), t("cat.deleted"))}>
+              <Trash2Icon /> {t("common.delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -121,12 +123,12 @@ export function CategoryManager({ categories, currency }: { categories: Category
     <div className="flex flex-col gap-2">
       <ul className="divide-y">{active.map((c, i, list) => row(c, i, list))}</ul>
       <Button variant="outline" className="mt-1 h-10 self-start" onClick={() => open("new")}>
-        <PlusIcon /> Add category
+        <PlusIcon /> {t("cat.add")}
       </Button>
 
       {archived.length ? (
         <details className="mt-3 group">
-          <summary className="cursor-pointer text-sm text-muted-foreground">Archived ({archived.length})</summary>
+          <summary className="cursor-pointer text-sm text-muted-foreground">{t("cat.archivedList", { count: archived.length })}</summary>
           <ul className="mt-1 divide-y">{archived.map((c, i, list) => row(c, i, list))}</ul>
         </details>
       ) : null}
@@ -134,7 +136,7 @@ export function CategoryManager({ categories, currency }: { categories: Category
       <ResponsiveDialog
         open={editing !== null}
         onOpenChange={(o) => !o && setEditing(null)}
-        title={editing === "new" ? "New category" : "Edit category"}
+        title={editing === "new" ? t("cat.new") : t("cat.edit")}
       >
         {editing !== null ? (
           <CategoryForm
@@ -156,20 +158,21 @@ function CategoryForm({ category, currency, onDone }: { category?: Category; cur
   const [excludeFromLiving, setExclude] = useState(category?.excludeFromLiving ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const defaultPlan = plan.trim() ? parseMoney(plan, currency) : 0;
     const next: Record<string, string> = {};
-    if (!name.trim()) next.name = "Name is required";
-    if (defaultPlan === null) next.plan = "Invalid amount";
+    if (!name.trim()) next.name = t("errors.nameRequired");
+    if (defaultPlan === null) next.plan = t("common.invalidAmount");
     setErrors(next);
     if (Object.keys(next).length) return;
 
     startTransition(async () => {
       const res = await saveCategory({ id: category?.id, name, color, excludeFromLiving, defaultPlan: defaultPlan! });
       if (res.ok) {
-        toast.success(category ? "Category updated" : "Category added");
+        toast.success(category ? t("cat.updated") : t("cat.added"));
         onDone();
       } else toast.error(res.error);
     });
@@ -179,21 +182,21 @@ function CategoryForm({ category, currency, onDone }: { category?: Category; cur
     <form onSubmit={submit} noValidate>
       <FieldGroup className="gap-5">
         <Field data-invalid={!!errors.name}>
-          <FieldLabel htmlFor="cat-name">Name</FieldLabel>
+          <FieldLabel htmlFor="cat-name">{t("cat.name")}</FieldLabel>
           <Input id="cat-name" value={name} maxLength={50} onChange={(e) => setName(e.target.value)} className="h-10" />
           <FieldError>{errors.name}</FieldError>
         </Field>
 
         <Field>
-          <FieldLabel>Color</FieldLabel>
-          <div role="radiogroup" aria-label="Color" className="flex flex-wrap gap-2.5">
+          <FieldLabel>{t("cat.color")}</FieldLabel>
+          <div role="radiogroup" aria-label={t("cat.color")} className="flex flex-wrap gap-2.5">
             {CATEGORY_COLOR_KEYS.map((key) => (
               <button
                 key={key}
                 type="button"
                 role="radio"
                 aria-checked={color === key}
-                aria-label={CATEGORY_COLORS[key].label}
+                aria-label={t(`color.${key}`)}
                 onClick={() => setColor(key)}
                 className={cn(
                   "size-9 rounded-full ring-offset-2 ring-offset-background transition-shadow",
@@ -206,7 +209,7 @@ function CategoryForm({ category, currency, onDone }: { category?: Category; cur
         </Field>
 
         <Field data-invalid={!!errors.plan}>
-          <FieldLabel htmlFor="cat-plan">Planned per month</FieldLabel>
+          <FieldLabel htmlFor="cat-plan">{t("cat.planned")}</FieldLabel>
           <InputGroup className="h-10">
             <InputGroupInput
               id="cat-plan"
@@ -218,20 +221,20 @@ function CategoryForm({ category, currency, onDone }: { category?: Category; cur
             />
             <CurrencyAddon currency={currency} />
           </InputGroup>
-          <FieldDescription>Default for every month. You can override it per month in Statistics.</FieldDescription>
+          <FieldDescription>{t("cat.plannedHint")}</FieldDescription>
           <FieldError>{errors.plan}</FieldError>
         </Field>
 
         <Field orientation="horizontal">
           <FieldContent>
-            <FieldLabel htmlFor="cat-exclude">Exclude from cost of living</FieldLabel>
-            <FieldDescription>For savings or one-off spending (like &quot;Inne&quot;).</FieldDescription>
+            <FieldLabel htmlFor="cat-exclude">{t("cat.exclude")}</FieldLabel>
+            <FieldDescription>{t("cat.excludeHint")}</FieldDescription>
           </FieldContent>
           <Switch id="cat-exclude" checked={excludeFromLiving} onCheckedChange={setExclude} />
         </Field>
 
         <Button type="submit" size="lg" className="h-11" disabled={pending}>
-          {pending ? "Saving…" : "Save"}
+          {pending ? t("common.saving") : t("common.save")}
         </Button>
       </FieldGroup>
     </form>

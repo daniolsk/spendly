@@ -7,6 +7,7 @@ import { ChevronLeftIcon, ChevronRightIcon, Loader2Icon } from "lucide-react";
 import { cn } from "cn";
 import { useMounted } from "@/hooks/use-media-query";
 import { SWIPE_DISTANCE, useSwipeNavigation } from "@/hooks/use-swipe-navigation";
+import { useT } from "@/lib/i18n/client";
 import { isMonthKey, monthLabel, shiftMonth } from "@/lib/month";
 
 const HIDDEN_OFFSET = 56; // px the pill sits off its resting spot when hidden
@@ -18,6 +19,7 @@ const SETTLE = "cubic-bezier(0.22, 1, 0.36, 1)"; // ease-out (quint)
  */
 export function PeriodSwipe() {
   const pathname = usePathname();
+  const { locale } = useT();
   // Keep the open month tab, like the arrows do.
   const tab = useSearchParams().get("tab");
   const [, kind, key] = pathname.split("/");
@@ -26,7 +28,7 @@ export function PeriodSwipe() {
     const href = (k: string) => `/m/${k}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`;
     const before = shiftMonth(key, -1);
     const after = shiftMonth(key, 1);
-    return <SwipeNavigation prev={href(before)} next={href(after)} prevLabel={monthLabel(before)} nextLabel={monthLabel(after)} />;
+    return <SwipeNavigation prev={href(before)} next={href(after)} prevLabel={monthLabel(before, "long", locale)} nextLabel={monthLabel(after, "long", locale)} />;
   }
   if (kind === "y" && key && /^\d{4}$/.test(key)) {
     const year = Number(key);

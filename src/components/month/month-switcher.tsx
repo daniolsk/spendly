@@ -7,9 +7,12 @@ import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronLeftIcon, Chevro
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useT } from "@/lib/i18n/client";
 import { currentMonthKey, monthLabel, monthName, parseMonthKey, shiftMonth } from "@/lib/month";
 
 export function MonthSwitcher({ month }: { month: string }) {
+  const t = useT();
+  const { locale } = t;
   const { year } = parseMonthKey(month);
   const [open, setOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(year);
@@ -19,13 +22,13 @@ export function MonthSwitcher({ month }: { month: string }) {
   const monthHref = (key: string) => `/m/${key}${tab ? `?tab=${encodeURIComponent(tab)}` : ""}`;
   // Name the current month (with its year when it differs) and point the arrow the way it lies.
   const todayName =
-    parseMonthKey(today).year === year ? monthName(parseMonthKey(today).month, "long") : monthLabel(today, "short");
+    parseMonthKey(today).year === year ? monthName(parseMonthKey(today).month, "long", locale) : monthLabel(today, "short", locale);
   const todayIsBehind = today < month;
 
   return (
     <div className="flex items-center gap-1 max-md:w-full">
       <Button variant="ghost" size="icon-lg" asChild>
-        <Link href={monthHref(shiftMonth(month, -1))} aria-label="Previous month">
+        <Link href={monthHref(shiftMonth(month, -1))} aria-label={t("month.previous")}>
           <ChevronLeftIcon />
         </Link>
       </Button>
@@ -38,13 +41,13 @@ export function MonthSwitcher({ month }: { month: string }) {
       >
         <PopoverTrigger asChild>
           <Button variant="ghost" className="h-10 px-2 text-xl font-semibold tracking-tight sm:text-2xl">
-            {monthLabel(month)}
+            {monthLabel(month, "long", locale)}
             <ChevronDownIcon className="text-muted-foreground" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72" align="start">
           <div className="mb-3 flex items-center justify-between">
-            <Button variant="ghost" size="icon" onClick={() => setPickerYear((y) => y - 1)} aria-label="Previous year">
+            <Button variant="ghost" size="icon" onClick={() => setPickerYear((y) => y - 1)} aria-label={t("year.previous")}>
               <ChevronLeftIcon />
             </Button>
             <Link
@@ -54,7 +57,7 @@ export function MonthSwitcher({ month }: { month: string }) {
             >
               {pickerYear}
             </Link>
-            <Button variant="ghost" size="icon" onClick={() => setPickerYear((y) => y + 1)} aria-label="Next year">
+            <Button variant="ghost" size="icon" onClick={() => setPickerYear((y) => y + 1)} aria-label={t("year.next")}>
               <ChevronRightIcon />
             </Button>
           </div>
@@ -70,7 +73,7 @@ export function MonthSwitcher({ month }: { month: string }) {
                   className={cn("h-9", key === today && key !== month && "ring-1 ring-ring")}
                 >
                   <Link href={monthHref(key)} onClick={() => setOpen(false)}>
-                    {monthName(i + 1)}
+                    {monthName(i + 1, "short", locale)}
                   </Link>
                 </Button>
               );
@@ -78,13 +81,13 @@ export function MonthSwitcher({ month }: { month: string }) {
           </div>
           <Button asChild variant="outline" size="sm" className="mt-3 h-9 w-full">
             <Link href={monthHref(today)} onClick={() => setOpen(false)}>
-              This month
+              {t("month.thisMonth")}
             </Link>
           </Button>
         </PopoverContent>
       </Popover>
       <Button variant="ghost" size="icon-lg" asChild>
-        <Link href={monthHref(shiftMonth(month, 1))} aria-label="Next month">
+        <Link href={monthHref(shiftMonth(month, 1))} aria-label={t("month.next")}>
           <ChevronRightIcon />
         </Link>
       </Button>
@@ -96,7 +99,7 @@ export function MonthSwitcher({ month }: { month: string }) {
           className="ml-1 text-muted-foreground hover:text-foreground max-sm:hidden"
           asChild
         >
-          <Link href={monthHref(today)} aria-label={`Back to ${monthLabel(today)}`}>
+          <Link href={monthHref(today)} aria-label={t("month.backTo", { month: monthLabel(today, "long", locale) })}>
             {todayIsBehind ? <ArrowLeftIcon data-icon="inline-start" /> : null}
             {todayName}
             {todayIsBehind ? null : <ArrowRightIcon data-icon="inline-end" />}

@@ -66,3 +66,15 @@ export function guessCurrency(languages: readonly string[]): CurrencyCode {
   }
   return DEFAULT_CURRENCY;
 }
+
+/** Currency name in the UI language, e.g. "Polish złoty" / "Złoty polski". */
+export function currencyName(code: string, language: string) {
+  const fallback = CURRENCIES.find((c) => c.code === code)?.name ?? code;
+  if (language === "en") return fallback;
+  try {
+    const name = new Intl.DisplayNames([language], { type: "currency" }).of(code) ?? fallback;
+    return name.charAt(0).toLocaleUpperCase() + name.slice(1);
+  } catch {
+    return fallback;
+  }
+}

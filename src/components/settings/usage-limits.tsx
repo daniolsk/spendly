@@ -5,9 +5,8 @@ import { cn } from "cn";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LIMITS, type Usage } from "@/lib/limits";
+import { useT } from "@/lib/i18n/client";
 import { monthLabel } from "@/lib/month";
-
-const n = (v: number) => v.toLocaleString("en-US");
 
 // Floor so a cap is only shown as 100% once it is actually reached.
 function percent(used: number, limit: number) {
@@ -17,22 +16,23 @@ function percent(used: number, limit: number) {
 }
 
 export function UsageLimits({ usage, month }: { usage: Usage; month: string }) {
+  const t = useT();
   const rows = [
     {
-      label: `Transactions in ${monthLabel(month)}`,
-      hint: "Limit applies to each month",
+      label: t("usage.inMonth", { month: monthLabel(month, "long", t.locale) }),
+      hint: t("usage.inMonthHint"),
       used: usage.transactionsThisMonth,
       limit: LIMITS.transactionsPerMonth,
     },
     {
-      label: "Added in the last 24 hours",
-      hint: "Rolling window",
+      label: t("usage.day"),
+      hint: t("usage.dayHint"),
       used: usage.transactionsToday,
       limit: LIMITS.transactionsPerDay,
     },
-    { label: "All transactions", used: usage.transactionsTotal, limit: LIMITS.transactionsTotal },
-    { label: "Categories", hint: "Archived ones included", used: usage.categories, limit: LIMITS.categories },
-    { label: "Months with a custom plan", used: usage.planMonths, limit: LIMITS.planMonths },
+    { label: t("usage.total"), used: usage.transactionsTotal, limit: LIMITS.transactionsTotal },
+    { label: t("usage.categories"), hint: t("usage.categoriesHint"), used: usage.categories, limit: LIMITS.categories },
+    { label: t("usage.planMonths"), used: usage.planMonths, limit: LIMITS.planMonths },
   ];
 
   return (
@@ -47,6 +47,7 @@ export function UsageLimits({ usage, month }: { usage: Usage; month: string }) {
 function UsageRow({ label, hint, used, limit }: { label: string; hint?: string; used: number; limit: number }) {
   // Radix tooltips only open on hover/focus. On touch screens a tap toggles it
   // instead, decided from the state at pointerdown (before Radix closes it).
+  const t = useT();
   const [open, setOpen] = useState(false);
   const tap = useRef<boolean | null>(null);
   const pct = Math.min(100, (used / limit) * 100);
@@ -76,7 +77,7 @@ function UsageRow({ label, hint, used, limit }: { label: string; hint?: string; 
                 <span className="font-medium">{label}</span>
                 {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
               </div>
-              <span className="tabular shrink-0 text-muted-foreground">{percent(used, limit)} used</span>
+              <span className="tabular shrink-0 text-muted-foreground">{t("usage.used", { percent: percent(used, limit) })}</span>
             </div>
             <Progress
               value={pct}
@@ -86,7 +87,7 @@ function UsageRow({ label, hint, used, limit }: { label: string; hint?: string; 
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" align="end" className="tabular">
-          {n(used)} of {n(limit)}
+          {t("usage.of", { used: t.n(used), limit: t.n(limit) })}
         </TooltipContent>
       </Tooltip>
     </li>

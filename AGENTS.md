@@ -43,11 +43,11 @@ src/
   app/
     page.tsx             public landing page: Google sign-in when signed out, "Open dashboard" when signed in
     privacy/, terms/     public legal pages (components/legal-page.tsx; linked from the landing page and Google's OAuth consent screen; keep them accurate when data handling changes)
-    (app)/layout.tsx     authenticated shell (nav, user menu, inactivity lock)
+    (app)/layout.tsx     authenticated shell (nav, user menu, inactivity lock); provides the UI language
     (app)/m/[month]      month view (YYYY-MM): transactions, income, stats, plan
     (app)/y/[year]       year statistics / charts
     (app)/settings       categories, currency, opening balance, account
-    welcome/             first-run currency picker; (app)/layout.tsx redirects here until user_settings.currencyConfirmedAt is set
+    welcome/             first-run setup (language, currency, categories…); (app)/layout.tsx redirects here until user_settings.currencyConfirmedAt is set
     api/auth/[...all]    Better Auth handler
   db/schema.ts           Drizzle schema: Better Auth tables + user_settings, category, transaction, month_plan
   db/index.ts            db client (DATABASE_URL_POOLED ?? DATABASE_URL)
@@ -55,11 +55,14 @@ src/
     dal.ts               requireUser() — auth check used by every page and action
     queries.ts           read model; every query scoped by userId
     actions.ts           server actions: Zod-validated, re-authenticated, ownership-checked
-    seed.ts              default categories for a newly created user
+    seed.ts              inserts the default categories (lib/default-categories.ts) for a newly created user
+    i18n.ts              getT(): translator in the signed-in user's language (server components, metadata, actions)
   lib/
     auth.ts              Better Auth config (Google only, open sign-up; new users are seeded with default categories)
     money.ts             format/parse integer minor units in the account currency
     currency.ts          supported currencies (2-decimal only) + the locale each is formatted in
+    i18n/                UI languages (en, pl): en.ts is the source of message keys, pl.ts must have every key;
+                         index.ts getTranslator(); client.tsx I18nProvider / useT() / <T k="…" /> for client components
     month.ts             YYYY-MM / YYYY-MM-DD helpers, zonedToday() (APP_TIMEZONE, default Europe/Warsaw)
     app-lock.ts          client-side inactivity lock (privacy only, not security)
     colors.ts            category color keys
@@ -77,6 +80,7 @@ src/
 - "Cost of living" excludes categories with `excludeFromLiving`.
 - "Balance since start" = `user_settings.openingBalance` + all income − all expenses up to the end of that month.
 - Archived categories are hidden from pickers but keep their history.
+- Each account has a UI language (`user_settings.language`, `en` | `pl`), picked on first run and in Settings. It only changes UI text and date formatting; money keeps the number style of the currency. Category names and descriptions are user data and are never translated (first-run setup renames the untouched default categories once, to the picked language).
 - Users can delete their account in Settings (`deleteAccount` in `server/actions.ts`): it deletes every per-user row in one `db.batch` and clears the auth cookies, so the next sign-in is a brand-new user. **Any new per-user table must be added to that batch.**
 - Per-user caps in `lib/limits.ts` (transactions per month / per 24 h / total, categories, plan months) are checked in the server actions before inserts and shown in Settings. They exist only to stop abuse — keep them far above real use; any new kind of user-created data needs a cap too.
 
@@ -84,7 +88,8 @@ src/
 
 - Every page and server action calls `requireUser()`; every query/mutation filters by `userId`; actions verify ownership of referenced ids (`assertOwnCategory`). Sign-up is open to any Google account, so this per-user scoping is the only thing separating users' data — never skip it.
 - Actions return `ActionResult` (`{ ok } | { ok: false, error }`), use `fail()` for errors and `refresh()` after writes.
-- Match surrounding style: short comments only where intent isn't obvious, UI text in English (including the default categories seeded for new users in `server/seed.ts`).
+- Match surrounding style: short comments only where intent isn't obvious.
+- All UI text goes through the translator — never hardcode user-facing strings. Add every new message to **both** `lib/i18n/en.ts` and `lib/i18n/pl.ts` (TypeScript fails if `pl.ts` misses a key); counts use plural objects (Polish needs `one`/`few`/`many`/`other`). Client components use `useT()`; server components use `await getT()` (`server/i18n.ts`); static parts of pages outside a data boundary use `<T k="…" />`. Server action errors use `failWith(key)`, and Zod messages are message keys (`msg("errors.…")`). Format dates with the helpers in `lib/month.ts`, passing `t.locale`. The landing page and the legal pages are English only.
 
 ## Checks
 
@@ -102,8 +107,12 @@ The user should never be the one to find a layout bug. Do these yourself, every 
 **2. Check responsiveness at every width**
 - Widths: **320, 360, 390** (phones), **768, 800–900** (sidebar just appeared — content area is narrowest here, the riskiest range), **1024, 1280, 1440**.
 - Pass criteria: no horizontal page scroll (`document.documentElement.scrollWidth === innerWidth`), no element outside its container, nothing clipped or overlapping, and rows that can run out of space wrap (`flex-wrap`) instead of pushing items off-screen.
+<<<<<<< HEAD
+- Also check **both languages** (Polish labels are often longer than English), light **and** dark themes, and anything that scrolls (dialogs, sheets, tables) at a short viewport height (~700px).
+=======
 - Also check light **and** dark themes, and anything that scrolls (dialogs, sheets, tables) at a short viewport height (~700px).
 - **Animations and gestures** (swipes, drags, transitions): screenshots aren't enough — a wrong state that shows for one frame is still a bug the user sees. In Playwright, sample the element on every animation frame *and* in a `MutationObserver`, and assert on every sample where it's visible that it shows the right content in the right place. Drive gesture **sequences**, not one gesture: repeat the same direction, reverse direction, cancel, then go again, so stale state left over from the previous gesture shows up. When imperative style writes (refs, rAF) and React state drive the same element, make sure the state lands first (e.g. `flushSync`) so the two never disagree on screen.
+>>>>>>> origin/main
 
 **3. How to check in a cloud session (no DB, no login)**
 - Start the dev server with dummy env vars: `DATABASE_URL=postgresql://u:p@localhost/db BETTER_AUTH_SECRET=<random> BETTER_AUTH_URL=http://localhost:3123 GOOGLE_CLIENT_ID=x GOOGLE_CLIENT_SECRET=y npx next dev -p 3123`.

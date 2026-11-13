@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useT } from "@/lib/i18n/client";
 
 const TABS = ["transactions", "income", "stats"] as const;
 type Tab = (typeof TABS)[number];
@@ -18,6 +19,7 @@ export function MonthTabs({
 }) {
   // The URL is the source of truth, so a month restored from the router cache
   // still shows the tab you navigated with.
+  const t = useT();
   const param = useSearchParams().get("tab");
   const tab: Tab = TABS.includes(param as Tab) ? (param as Tab) : "transactions";
 
@@ -32,9 +34,9 @@ export function MonthTabs({
   return (
     <Tabs value={tab} onValueChange={change} className="gap-4">
       <TabsList className="w-full sm:w-auto">
-        <TabsTrigger value="transactions">Transactions</TabsTrigger>
-        <TabsTrigger value="income">Income</TabsTrigger>
-        <TabsTrigger value="stats">Statistics</TabsTrigger>
+        <TabsTrigger value="transactions">{t("month.tabTransactions")}</TabsTrigger>
+        <TabsTrigger value="income">{t("common.income")}</TabsTrigger>
+        <TabsTrigger value="stats">{t("month.tabStats")}</TabsTrigger>
       </TabsList>
       <TabsContent value="transactions">{transactions}</TabsContent>
       <TabsContent value="income">{income}</TabsContent>

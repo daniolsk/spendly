@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { CategoryDot } from "@/components/category-dot";
 import { CurrencyAddon } from "@/components/money";
 import { CurrencyExample, CurrencySelect } from "@/components/settings/currency-select";
+import { LanguageSelect } from "@/components/settings/language-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
@@ -16,26 +17,51 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { CATEGORY_COLOR_KEYS } from "@/lib/colors";
 import { DEFAULT_CURRENCY, guessCurrency, type CurrencyCode } from "@/lib/currency";
+import { defaultCategoryKey } from "@/lib/default-categories";
+import { getTranslator, type Language, type MessageKey } from "@/lib/i18n";
+import { I18nProvider, useT } from "@/lib/i18n/client";
 import { formatMoney, parseMoney, toInputValue } from "@/lib/money";
 import { completeOnboarding } from "@/server/actions";
 
 const subscribeNever = () => () => {};
 
 type StarterCategory = { id: string; name: string; color: string };
-/** A category in the setup list: a seeded one (with id) or one added here. */
-type Draft = { key: string; id?: string; name: string; color: string; selected: boolean };
+/**
+ * A category in the setup list: a seeded one (with id) or one added here. Untouched default
+ * categories carry their message key, so they show (and are saved) in the picked language.
+ */
+type Draft = { key: string; id?: string; name: string; nameKey?: MessageKey; color: string; selected: boolean };
 
 const STEPS = [
-  { title: "Welcome to Spendly", description: "Pick the currency you track your money in." },
-  { title: "Your categories", description: "Expenses are grouped into categories. Keep the ones you need and add your own." },
-  { title: "Monthly plan", description: "How much do you want to spend per category each month? Leave blank for no limit." },
-  { title: "Opening balance", description: "How much money do you have right now? It’s the starting point for “Balance since start”." },
-] as const;
+  { title: "welcome.step0Title", description: "welcome.step0Description" },
+  { title: "welcome.step1Title", description: "welcome.step1Description" },
+  { title: "welcome.step2Title", description: "welcome.step2Description" },
+  { title: "welcome.step3Title", description: "welcome.step3Description" },
+] as const satisfies readonly { title: MessageKey; description: MessageKey }[];
 
 const initialDrafts = (categories: StarterCategory[]): Draft[] =>
-  categories.map((c) => ({ key: c.id, id: c.id, name: c.name, color: c.color, selected: true }));
+  categories.map((c) => ({
+    key: c.id,
+    id: c.id,
+    name: c.name,
+    nameKey: defaultCategoryKey(c.name),
+    color: c.color,
+    selected: true,
+  }));
 
-export function WelcomeForm({ name, categories }: { name: string; categories: StarterCategory[] }) {
+export function WelcomeForm({
+  name,
+  categories,
+  initialLanguage,
+}: {
+  name: string;
+  categories: StarterCategory[];
+  initialLanguage: Language;
+}) {
+  const [language, setLanguage] = useState(initialLanguage);
+  const t = getTranslator(language);
+  const draftName = (d: Draft) => (d.nameKey ? t(d.nameKey) : d.name);
+
   // Pre-selected from the browser language (server render and hydration use the default).
   const guessed = useSyncExternalStore(subscribeNever, () => guessCurrency(navigator.languages), () => DEFAULT_CURRENCY);
   const [picked, setCurrency] = useState<CurrencyCode | null>(null);
@@ -59,7 +85,7 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
     for (const d of selected) {
       const raw = source[d.key]?.trim();
       const value = raw ? parseMoney(raw, currency) : 0;
-      if (value === null) next[`plan:${d.key}`] = "Invalid amount";
+      if (value === null) next[`plan:${d.key}`] = t("common.invalidAmount");
       else result.set(d.key, value);
     }
     setErrors(next);
@@ -76,7 +102,7 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
     if (opening.trim()) {
       const parsed = parseMoney(opening, currency);
       if (parsed === null) {
-        setErrors({ balance: "Invalid amount" });
+        setErrors({ balance: t("common.invalidAmount") });
         return;
       }
       openingBalance = opening.trim().startsWith("-") ? -parsed : parsed;
@@ -84,14 +110,22 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
     startTransition(async () => {
       const res = await completeOnboarding({
         currency,
-        keep: selected.filter((d) => d.id).map((d) => ({ id: d.id!, defaultPlan: planMap.get(d.key) ?? 0 })),
+        language,
+        keep: selected
+          .filter((d) => d.id)
+          .map((d) => ({
+            id: d.id!,
+            defaultPlan: planMap.get(d.key) ?? 0,
+            // Default categories are stored in English; rename them to the picked language.
+            ...(d.nameKey && language !== "en" && { name: draftName(d) }),
+          })),
         add: selected
           .filter((d) => !d.id)
           .map((d) => ({ name: d.name, color: d.color, defaultPlan: planMap.get(d.key) ?? 0 })),
         openingBalance,
       });
       if (res.ok) {
-        toast.success("You’re all set");
+        toast.success(t("welcome.done"));
         router.replace("/m");
       } else toast.error(res.error);
     });
@@ -100,7 +134,7 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
   function next(e?: React.FormEvent) {
     e?.preventDefault();
     if (step === 1 && selected.length === 0) {
-      setErrors({ categories: "Keep at least one category." });
+      setErrors({ categories: t("errors.keepOneCategory") });
       return;
     }
     if (step === 2 && !parsePlans(plans)) return;
@@ -125,34 +159,41 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
   }
 
   return (
-    <>
+    <I18nProvider language={language}>
       <div className="flex flex-col items-center gap-3 text-center">
         <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <WalletIcon className="size-5" />
         </span>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {step === 0 && name ? `Welcome, ${name}` : STEPS[step].title}
+          {step === 0 && name ? t("welcome.hello", { name }) : t(STEPS[step].title)}
         </h1>
-        <p className="text-sm text-pretty text-muted-foreground">{STEPS[step].description}</p>
+        <p className="text-sm text-pretty text-muted-foreground">{t(STEPS[step].description)}</p>
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>
-            Step {step + 1} of {STEPS.length}
-          </span>
-          {step > 0 ? <span>Optional</span> : null}
+          <span>{t("welcome.step", { step: step + 1, total: STEPS.length })}</span>
+          {step > 0 ? <span>{t("common.optional")}</span> : null}
         </div>
-        <Progress value={((step + 1) / STEPS.length) * 100} aria-label="Setup progress" />
+        <Progress value={((step + 1) / STEPS.length) * 100} aria-label={t("welcome.progress")} />
       </div>
 
       <Card>
         <CardContent>
           <form onSubmit={next} noValidate className="flex flex-col gap-5">
-            {step === 0 ? <CurrencyStep currency={currency} onChange={setCurrency} /> : null}
+            {step === 0 ? (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="welcome-language">{t("settings.language")}</FieldLabel>
+                  <LanguageSelect id="welcome-language" value={language} onChange={setLanguage} className="h-11!" />
+                </Field>
+                <CurrencyStep currency={currency} onChange={setCurrency} />
+              </>
+            ) : null}
             {step === 1 ? (
               <CategoriesStep
                 drafts={drafts}
+                draftName={draftName}
                 onChange={(d) => {
                   setDrafts(d);
                   setErrors({});
@@ -161,11 +202,11 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
               />
             ) : null}
             {step === 2 ? (
-              <PlansStep drafts={selected} plans={plans} onChange={setPlans} currency={currency} errors={errors} />
+              <PlansStep drafts={selected} draftName={draftName} plans={plans} onChange={setPlans} currency={currency} errors={errors} />
             ) : null}
             {step === 3 ? (
               <Field data-invalid={!!errors.balance}>
-                <FieldLabel htmlFor="welcome-balance">Current balance</FieldLabel>
+                <FieldLabel htmlFor="welcome-balance">{t("welcome.balance")}</FieldLabel>
                 <InputGroup className="h-11">
                   <InputGroupInput
                     id="welcome-balance"
@@ -178,14 +219,14 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
                   />
                   <CurrencyAddon currency={currency} />
                 </InputGroup>
-                <FieldDescription>Use a minus sign if you’re in debt. You can change it later in Settings.</FieldDescription>
+                <FieldDescription>{t("welcome.balanceHint")}</FieldDescription>
                 <FieldError>{errors.balance}</FieldError>
               </Field>
             ) : null}
 
             <div className="flex flex-col gap-2">
               <Button type="submit" size="lg" className="h-11 w-full gap-2" disabled={pending}>
-                {last ? (pending ? "Saving…" : "Finish") : "Continue"}
+                {last ? (pending ? t("common.saving") : t("welcome.finish")) : t("welcome.continue")}
                 {last ? <CheckIcon /> : <ArrowRightIcon />}
               </Button>
               {step > 0 ? (
@@ -202,10 +243,10 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
                     }}
                   >
                     <ArrowLeftIcon />
-                    Back
+                    {t("welcome.back")}
                   </Button>
                   <Button type="button" variant="ghost" size="lg" className="h-11" disabled={pending} onClick={skip}>
-                    {last ? "Skip & finish" : "Skip"}
+                    {last ? t("welcome.skipFinish") : t("welcome.skip")}
                   </Button>
                 </div>
               ) : null}
@@ -215,22 +256,22 @@ export function WelcomeForm({ name, categories }: { name: string; categories: St
       </Card>
 
       <p className="text-center text-xs text-pretty text-muted-foreground">
-        {step === 0
-          ? "Next you can set up categories, a monthly plan and your balance — or skip them."
-          : "Everything here can be changed later in Settings."}
+        {step === 0 ? t("welcome.footerFirst") : t("welcome.footer")}
       </p>
-    </>
+    </I18nProvider>
   );
 }
 
 function CurrencyStep({ currency, onChange }: { currency: CurrencyCode; onChange: (c: CurrencyCode) => void }) {
+  const t = useT();
   return (
     <Field>
-      <FieldLabel htmlFor="welcome-currency">Currency</FieldLabel>
+      <FieldLabel htmlFor="welcome-currency">{t("settings.currency")}</FieldLabel>
       <CurrencySelect id="welcome-currency" value={currency} onChange={onChange} className="h-11!" />
       <FieldDescription>
-        Amounts will look like <CurrencyExample currency={currency} className="font-medium text-foreground" />. You can
-        change it later in Settings.
+        {t.rich("welcome.currencyHint", {
+          example: <CurrencyExample currency={currency} className="font-medium text-foreground" />,
+        })}
       </FieldDescription>
     </Field>
   );
@@ -238,25 +279,28 @@ function CurrencyStep({ currency, onChange }: { currency: CurrencyCode; onChange
 
 function CategoriesStep({
   drafts,
+  draftName,
   onChange,
   error,
 }: {
   drafts: Draft[];
+  draftName: (d: Draft) => string;
   onChange: (drafts: Draft[]) => void;
   error?: string;
 }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState("");
 
   function add() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    if (drafts.some((d) => d.name.toLowerCase() === trimmed.toLowerCase())) {
-      setNameError("You already have this category.");
+    if (drafts.some((d) => draftName(d).toLowerCase() === trimmed.toLowerCase())) {
+      setNameError(t("welcome.duplicate"));
       return;
     }
     if (drafts.filter((d) => !d.id).length >= 30) {
-      setNameError("Add more later in Settings.");
+      setNameError(t("welcome.addLater"));
       return;
     }
     const color = CATEGORY_COLOR_KEYS[drafts.length % CATEGORY_COLOR_KEYS.length];
@@ -268,7 +312,7 @@ function CategoriesStep({
   return (
     <div className="flex flex-col gap-4">
       <Field data-invalid={!!error}>
-        <FieldLabel>Categories</FieldLabel>
+        <FieldLabel>{t("welcome.categories")}</FieldLabel>
         <ul className="-my-1 divide-y">
           {drafts.map((d) => (
             <li key={d.key} className="flex min-h-12 items-center gap-3 py-1">
@@ -278,7 +322,7 @@ function CategoriesStep({
                 className="min-w-0 flex-1 truncate text-sm font-medium data-[off=true]:text-muted-foreground"
                 data-off={!d.selected}
               >
-                {d.name}
+                {draftName(d)}
               </label>
               {d.id ? (
                 <Switch
@@ -293,7 +337,7 @@ function CategoriesStep({
                   type="button"
                   variant="ghost"
                   size="icon-lg"
-                  aria-label={`Remove ${d.name}`}
+                  aria-label={t("welcome.remove", { name: d.name })}
                   onClick={() => onChange(drafts.filter((x) => x.key !== d.key))}
                   className="-mr-2"
                 >
@@ -307,13 +351,13 @@ function CategoriesStep({
       </Field>
 
       <Field data-invalid={!!nameError}>
-        <FieldLabel htmlFor="welcome-new-cat">Add your own</FieldLabel>
+        <FieldLabel htmlFor="welcome-new-cat">{t("welcome.addOwn")}</FieldLabel>
         <div className="flex gap-2">
           <Input
             id="welcome-new-cat"
             value={name}
             maxLength={50}
-            placeholder="e.g. Kids, Pets, Travel"
+            placeholder={t("welcome.addPlaceholder")}
             onChange={(e) => {
               setName(e.target.value);
               setNameError("");
@@ -327,7 +371,7 @@ function CategoriesStep({
             className="h-10"
           />
           <Button type="button" variant="outline" className="h-10" onClick={add} disabled={!name.trim()}>
-            <PlusIcon /> Add
+            <PlusIcon /> {t("welcome.add")}
           </Button>
         </div>
         <FieldError>{nameError}</FieldError>
@@ -338,17 +382,20 @@ function CategoriesStep({
 
 function PlansStep({
   drafts,
+  draftName,
   plans,
   onChange,
   currency,
   errors,
 }: {
   drafts: Draft[];
+  draftName: (d: Draft) => string;
   plans: Record<string, string>;
   onChange: (plans: Record<string, string>) => void;
   currency: string;
   errors: Record<string, string>;
 }) {
+  const t = useT();
   const total = drafts.reduce((sum, d) => sum + (parseMoney(plans[d.key] ?? "", currency) ?? 0), 0);
   return (
     <div className="flex flex-col gap-3">
@@ -360,7 +407,7 @@ function PlansStep({
               <div className="flex items-center gap-3">
                 <CategoryDot color={d.color} className="size-3" />
                 <label htmlFor={`welcome-plan-${d.key}`} className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {d.name}
+                  {draftName(d)}
                 </label>
                 <InputGroup className="h-10 w-32 shrink-0 sm:w-36" data-invalid={!!error || undefined}>
                   <InputGroupInput
@@ -381,10 +428,10 @@ function PlansStep({
         })}
       </ul>
       <div className="flex items-center justify-between border-t pt-3 text-sm">
-        <span className="text-muted-foreground">Planned per month</span>
+        <span className="text-muted-foreground">{t("welcome.plannedPerMonth")}</span>
         <span className="tabular font-medium">{formatMoney(total, { currency })}</span>
       </div>
-      <FieldDescription>Applies to every month. You can adjust a single month later in Statistics.</FieldDescription>
+      <FieldDescription>{t("welcome.plansHint")}</FieldDescription>
     </div>
   );
 }
