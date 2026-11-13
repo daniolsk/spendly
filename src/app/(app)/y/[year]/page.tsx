@@ -10,6 +10,7 @@ import { CategoryLabel } from "@/components/category-dot";
 import { Money } from "@/components/money";
 import { StatTile } from "@/components/stat-tile";
 import { CategoryBreakdown } from "@/components/stats/category-breakdown";
+import { SwipeNavigation } from "@/components/swipe-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,6 +60,7 @@ async function YearContent({ params }: PageProps<"/y/[year]">) {
             <ChevronRightIcon />
           </Link>
         </Button>
+        <SwipeNavigation prev={`/y/${year - 1}`} next={`/y/${year + 1}`} />
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">

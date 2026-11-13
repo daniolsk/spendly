@@ -7,6 +7,7 @@ import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, ChevronLeftIcon, Chevro
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useSwipeNavigation } from "@/hooks/use-swipe-navigation";
 import { currentMonthKey, monthLabel, monthName, parseMonthKey, shiftMonth } from "@/lib/month";
 
 export function MonthSwitcher({ month }: { month: string }) {
@@ -21,6 +22,7 @@ export function MonthSwitcher({ month }: { month: string }) {
   const todayName =
     parseMonthKey(today).year === year ? monthName(parseMonthKey(today).month, "long") : monthLabel(today, "short");
   const todayIsBehind = today < month;
+  useSwipeNavigation(monthHref(shiftMonth(month, -1)), monthHref(shiftMonth(month, 1)));
 
   return (
     <div className="flex items-center gap-1 max-md:w-full">
