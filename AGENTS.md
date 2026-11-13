@@ -107,7 +107,12 @@ The user should never be the one to find a layout bug. Do these yourself, every 
 **2. Check responsiveness at every width**
 - Widths: **320, 360, 390** (phones), **768, 800–900** (sidebar just appeared — content area is narrowest here, the riskiest range), **1024, 1280, 1440**.
 - Pass criteria: no horizontal page scroll (`document.documentElement.scrollWidth === innerWidth`), no element outside its container, nothing clipped or overlapping, and rows that can run out of space wrap (`flex-wrap`) instead of pushing items off-screen.
+<<<<<<< HEAD
 - Also check **both languages** (Polish labels are often longer than English), light **and** dark themes, and anything that scrolls (dialogs, sheets, tables) at a short viewport height (~700px).
+=======
+- Also check light **and** dark themes, and anything that scrolls (dialogs, sheets, tables) at a short viewport height (~700px).
+- **Animations and gestures** (swipes, drags, transitions): screenshots aren't enough — a wrong state that shows for one frame is still a bug the user sees. In Playwright, sample the element on every animation frame *and* in a `MutationObserver`, and assert on every sample where it's visible that it shows the right content in the right place. Drive gesture **sequences**, not one gesture: repeat the same direction, reverse direction, cancel, then go again, so stale state left over from the previous gesture shows up. When imperative style writes (refs, rAF) and React state drive the same element, make sure the state lands first (e.g. `flushSync`) so the two never disagree on screen.
+>>>>>>> origin/main
 
 **3. How to check in a cloud session (no DB, no login)**
 - Start the dev server with dummy env vars: `DATABASE_URL=postgresql://u:p@localhost/db BETTER_AUTH_SECRET=<random> BETTER_AUTH_URL=http://localhost:3123 GOOGLE_CLIENT_ID=x GOOGLE_CLIENT_SECRET=y npx next dev -p 3123`.

@@ -6,6 +6,7 @@ import { BuildInfo } from "@/components/build-info";
 import { InactivityLock } from "@/components/shell/inactivity-lock";
 import { MobileTabBar, MobileTabBarSkeleton, NavSkeleton, SidebarNav } from "@/components/shell/nav";
 import { UserMenu } from "@/components/shell/user-menu";
+import { PeriodSwipe } from "@/components/swipe-navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toLanguage } from "@/lib/i18n";
 import { I18nProvider } from "@/lib/i18n/client";
@@ -47,6 +48,9 @@ async function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </Shell>
       <InactivityLock />
+      <Suspense fallback={null}>
+        <PeriodSwipe />
+      </Suspense>
     </I18nProvider>
   );
 }
