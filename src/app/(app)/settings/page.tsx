@@ -6,6 +6,7 @@ import { AccountCard } from "@/components/settings/account-card";
 import { CategoryManager } from "@/components/settings/category-manager";
 import { InstallApp } from "@/components/settings/install-app";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { ExportData } from "@/components/settings/export-data";
 import { CurrencyForm } from "@/components/settings/currency-form";
 import { LanguageForm } from "@/components/settings/language-form";
 import { OpeningBalanceForm } from "@/components/settings/opening-balance-form";
@@ -91,6 +92,15 @@ async function SettingsContent() {
           </CardHeader>
           <CardContent>
             <AccountCard user={{ name: user.name, email: user.email, image: user.image }} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.export")}</CardTitle>
+            <CardDescription>{t("settings.exportHint")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ExportData t={t} />
           </CardContent>
         </Card>
         <Card>

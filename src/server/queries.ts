@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
-import { category, monthPlan, transaction, userSettings, type Category } from "@/db/schema";
+import { category, monthPlan, transaction, userSettings, type Category, type Transaction } from "@/db/schema";
 import type { Usage } from "@/lib/limits";
 import { daysInMonth, monthRange } from "@/lib/month";
 
@@ -29,6 +29,29 @@ export async function getMonthTransactions(userId: string, month: string) {
     .from(transaction)
     .where(and(eq(transaction.userId, userId), gte(transaction.date, start), lte(transaction.date, end)))
     .orderBy(desc(transaction.date), desc(transaction.createdAt));
+}
+
+export type ExportRow = Pick<Transaction, "id" | "type" | "date" | "description" | "amount" | "hours" | "rate"> & {
+  category: string | null;
+};
+
+/** Every transaction of the user, oldest first, with its category name (for exports). */
+export async function getAllTransactions(userId: string): Promise<ExportRow[]> {
+  return db
+    .select({
+      id: transaction.id,
+      type: transaction.type,
+      date: transaction.date,
+      description: transaction.description,
+      amount: transaction.amount,
+      hours: transaction.hours,
+      rate: transaction.rate,
+      category: category.name,
+    })
+    .from(transaction)
+    .leftJoin(category, and(eq(category.id, transaction.categoryId), eq(category.userId, userId)))
+    .where(eq(transaction.userId, userId))
+    .orderBy(asc(transaction.date), asc(transaction.createdAt));
 }
 
 async function getBalanceUpTo(userId: string, endDate: string) {
