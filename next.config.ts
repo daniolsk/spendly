@@ -37,6 +37,10 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // The PDF export reads its fonts from disk.
+  outputFileTracingIncludes: {
+    "/api/export/*": ["./src/server/fonts/*.ttf"],
+  },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "lh3.googleusercontent.com" }],
   },
